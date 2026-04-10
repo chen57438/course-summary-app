@@ -22,6 +22,7 @@ EMOJI_PATTERN = re.compile(
     "]",
     flags=re.UNICODE,
 )
+BOLD_PATTERN = re.compile(r"\*\*(.+?)\*\*")
 
 
 def _ensure_cjk_font() -> None:
@@ -95,6 +96,15 @@ def _sanitize_text(text: str) -> str:
         .replace("\ufeff", "")
         .strip()
     )
+
+
+def _strip_markdown(text: str) -> str:
+    cleaned = _sanitize_text(text)
+    cleaned = BOLD_PATTERN.sub(r"\1", cleaned)
+    cleaned = cleaned.replace("**", "")
+    cleaned = cleaned.replace("__", "")
+    cleaned = cleaned.replace("`", "")
+    return cleaned
 
 
 def _looks_like_table_separator(line: str) -> bool:
@@ -188,13 +198,20 @@ def build_summary_pdf(summary_markdown: str, course_name: str) -> bytes:
                 continue
 
         if line.startswith("## "):
-            story.append(Paragraph(_escape_text(line[3:].strip()), styles["heading"]))
+            story.append(Paragraph(_escape_text(_strip_markdown(line[3:].strip())), styles["heading"]))
         elif line.startswith("# "):
-            story.append(Paragraph(_escape_text(line[2:].strip()), styles["title"]))
+            story.append(Paragraph(_escape_text(_strip_markdown(line[2:].strip())), styles["title"]))
         elif line.startswith("- ") or line.startswith("* "):
-            story.append(Paragraph(_escape_text(f"• {line[2:].strip()}"), styles["bullet"]))
+            bullet_text = _strip_markdown(line[2:].strip())
+            story.append(Paragraph(_escape_text(f"- {bullet_text}"), styles["bullet"]))
+        elif line.startswith("  * "):
+            bullet_text = _strip_markdown(line[4:].strip())
+            story.append(Paragraph(_escape_text(f"  - {bullet_text}"), styles["bullet"]))
+        elif line.startswith("  - "):
+            bullet_text = _strip_markdown(line[4:].strip())
+            story.append(Paragraph(_escape_text(f"  - {bullet_text}"), styles["bullet"]))
         else:
-            story.append(Paragraph(_escape_text(line), styles["body"]))
+            story.append(Paragraph(_escape_text(_strip_markdown(line)), styles["body"]))
 
         index += 1
 

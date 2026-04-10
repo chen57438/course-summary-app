@@ -58,6 +58,10 @@ def _generate_text(model: genai.GenerativeModel, prompt: str) -> str:
     try:
         response = model.generate_content(
             prompt,
+            generation_config={
+                "temperature": 0.2,
+                "max_output_tokens": 4096,
+            },
             request_options={"timeout": REQUEST_TIMEOUT_SECONDS},
         )
     except ResourceExhausted as exc:
