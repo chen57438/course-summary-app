@@ -130,7 +130,11 @@ Return the quiz in Markdown using exactly this structure:
    - C. Option C
    - D. Option D
    - Answer: B
-   - Explanation: Short explanation in English.
+   - Option Explanations:
+     - A: Explanation for why A is correct or incorrect.
+     - B: Explanation for why B is correct or incorrect.
+     - C: Explanation for why C is correct or incorrect.
+     - D: Explanation for why D is correct or incorrect.
 
 Repeat the same format for all questions.
 

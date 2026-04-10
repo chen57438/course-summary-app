@@ -4,6 +4,7 @@ import streamlit as st
 
 from src.exporter import build_summary_pdf
 from src.parser import extract_pdf_text, read_txt_file
+from src.quiz_parser import parse_quiz_markdown
 from src.summarizer import generate_quiz_material, summarize_course_material
 
 
@@ -104,15 +105,73 @@ def main() -> None:
             )
 
         if generate_quiz and quiz_markdown:
+            quiz_items = parse_quiz_markdown(quiz_markdown)
             st.subheader("English Quiz")
-            st.markdown(quiz_markdown)
-            st.download_button(
-                label="下载 Quiz Markdown",
-                data=quiz_markdown,
-                file_name="course_quiz.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
+
+            if not quiz_items:
+                st.warning("Quiz 已生成，但暂时无法解析成交互式题目。")
+                st.download_button(
+                    label="下载 Quiz Markdown",
+                    data=quiz_markdown,
+                    file_name="course_quiz.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                )
+            else:
+                with st.form("quiz_form"):
+                    user_answers: list[str] = []
+                    for index, item in enumerate(quiz_items, start=1):
+                        st.markdown(f"**{index}. {item['question']}**")
+                        labels = [
+                            f"{option}. {item['options'][option]}"
+                            for option in ("A", "B", "C", "D")
+                        ]
+                        answer = st.radio(
+                            f"Select your answer for Question {index}",
+                            labels,
+                            index=None,
+                            key=f"quiz_q_{index}",
+                            label_visibility="collapsed",
+                        )
+                        user_answers.append(answer[0] if answer else "")
+
+                    submitted = st.form_submit_button("提交 Quiz")
+
+                if submitted:
+                    score = 0
+                    for index, item in enumerate(quiz_items, start=1):
+                        selected = user_answers[index - 1]
+                        correct = item["answer"]
+                        is_correct = selected == correct
+                        if is_correct:
+                            score += 1
+
+                        st.markdown(f"### Question {index}")
+                        if selected:
+                            if is_correct:
+                                st.success(f"Your answer: {selected}  |  Correct answer: {correct}")
+                            else:
+                                st.error(f"Your answer: {selected}  |  Correct answer: {correct}")
+                        else:
+                            st.warning(f"You did not select an answer. Correct answer: {correct}")
+
+                        for option in ("A", "B", "C", "D"):
+                            option_text = item["options"].get(option, "")
+                            explanation = item["explanations"].get(option, "")
+                            prefix = "Correct" if option == correct else "Option"
+                            st.markdown(f"- **{option}. {option_text}**")
+                            if explanation:
+                                st.markdown(f"  {prefix} explanation: {explanation}")
+
+                    st.info(f"Quiz score: {score} / {len(quiz_items)}")
+
+                st.download_button(
+                    label="下载 Quiz Markdown（含答案）",
+                    data=quiz_markdown,
+                    file_name="course_quiz.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                )
 
         if pdf_text:
             with st.expander("提取到的课件文本预览"):
