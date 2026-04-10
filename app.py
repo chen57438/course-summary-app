@@ -20,41 +20,36 @@ def render_theme() -> None:
         """
         <style>
         :root {
-            --bg: #fff6ee;
-            --ink: #12131a;
-            --muted: #615b57;
-            --navy: #2850c8;
-            --copper: #ff7a45;
-            --sage: #2fa67f;
-            --sand: #ffe4c8;
-            --line: rgba(18, 19, 26, 0.09);
-            --card: rgba(255, 251, 246, 0.82);
-            --shadow: 0 22px 52px rgba(35, 25, 20, 0.10);
-            --shadow-soft: 0 10px 28px rgba(35, 25, 20, 0.06);
+            --bg: #fcf7f2;
+            --ink: #17171b;
+            --muted: #68615d;
+            --accent: #ea6b45;
+            --accent-soft: #ffd7c6;
+            --teal: #1f8a82;
+            --violet: #7a6ff0;
+            --line: rgba(23, 23, 27, 0.08);
+            --card: rgba(255, 252, 248, 0.9);
+            --shadow: 0 24px 60px rgba(44, 31, 23, 0.10);
+            --shadow-soft: 0 10px 28px rgba(44, 31, 23, 0.05);
         }
 
         .stApp {
             background:
-                radial-gradient(circle at 8% 10%, rgba(255, 122, 69, 0.22), transparent 22%),
-                radial-gradient(circle at 82% 14%, rgba(40, 80, 200, 0.18), transparent 26%),
-                radial-gradient(circle at 78% 70%, rgba(47, 166, 127, 0.16), transparent 22%),
-                linear-gradient(180deg, #fffaf5 0%, var(--bg) 100%);
+                radial-gradient(circle at 10% 10%, rgba(234, 107, 69, 0.18), transparent 22%),
+                radial-gradient(circle at 84% 14%, rgba(122, 111, 240, 0.14), transparent 26%),
+                radial-gradient(circle at 74% 68%, rgba(31, 138, 130, 0.12), transparent 20%),
+                linear-gradient(180deg, #fffdfb 0%, var(--bg) 100%);
             color: var(--ink);
         }
 
         .main .block-container {
-            max-width: 1240px;
+            max-width: 1220px;
             padding-top: 1.2rem;
             padding-bottom: 4rem;
         }
 
-        h1, h2, h3 {
-            color: var(--ink);
-            letter-spacing: -0.02em;
-        }
-
         [data-testid="stSidebar"] {
-            background: rgba(251, 246, 240, 0.94);
+            background: rgba(252, 247, 242, 0.94);
             border-right: 1px solid var(--line);
         }
 
@@ -67,24 +62,24 @@ def render_theme() -> None:
         div[data-testid="stExpander"] {
             background: var(--card);
             border: 1px solid var(--line);
-            border-radius: 24px;
+            border-radius: 22px;
             box-shadow: var(--shadow-soft);
         }
 
         div[data-testid="stFileUploader"] > section {
-            padding: 0.75rem 0.75rem 0.25rem 0.75rem;
+            padding: 0.8rem 0.8rem 0.3rem 0.8rem;
         }
 
         div[data-testid="stTextInput"] input {
             background: transparent !important;
             color: var(--ink) !important;
-            font-size: 1.05rem;
+            font-size: 1.04rem;
         }
 
         div[data-testid="stTextInput"] label,
         div[data-testid="stFileUploader"] label,
         div[data-testid="stCheckbox"] label {
-            color: var(--navy) !important;
+            color: #3f3b39 !important;
             font-weight: 600;
         }
 
@@ -92,26 +87,26 @@ def render_theme() -> None:
         .stDownloadButton > button,
         div[data-testid="stFormSubmitButton"] button {
             border-radius: 18px;
-            border: 1px solid rgba(27, 42, 82, 0.10);
-            background: linear-gradient(135deg, var(--navy) 0%, #4f7bff 100%);
+            border: 1px solid rgba(234, 107, 69, 0.14);
+            background: linear-gradient(135deg, var(--accent) 0%, #ff946b 100%);
             color: #ffffff;
             font-weight: 600;
             letter-spacing: 0.01em;
-            box-shadow: 0 16px 34px rgba(40, 80, 200, 0.20);
-            min-height: 3.2rem;
+            box-shadow: 0 16px 34px rgba(234, 107, 69, 0.20);
+            min-height: 3.15rem;
         }
 
         .stDownloadButton > button {
-            background: linear-gradient(135deg, #ffffff 0%, #fff2e5 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #fff7f0 100%);
             color: var(--ink);
-            border: 1px solid rgba(18, 19, 26, 0.10);
+            border: 1px solid rgba(23, 23, 27, 0.10);
             box-shadow: var(--shadow-soft);
         }
 
         .stButton > button:hover,
         .stDownloadButton > button:hover,
         div[data-testid="stFormSubmitButton"] button:hover {
-            border-color: rgba(27, 42, 82, 0.22);
+            border-color: rgba(234, 107, 69, 0.22);
         }
 
         [data-testid="stMarkdownContainer"] p {
@@ -119,13 +114,12 @@ def render_theme() -> None:
         }
 
         .hero-shell {
-            background:
-                linear-gradient(135deg, rgba(39,47,97,0.96), rgba(40,80,200,0.92));
+            background: linear-gradient(135deg, rgba(255, 251, 246, 0.96), rgba(252, 241, 231, 0.92));
             border: 1px solid var(--line);
-            border-radius: 38px;
-            padding: 2.4rem 2.3rem 2.1rem 2.3rem;
+            border-radius: 36px;
+            padding: 2.35rem 2.2rem 2.05rem 2.2rem;
             box-shadow: var(--shadow);
-            margin-bottom: 1.4rem;
+            margin-bottom: 1.35rem;
             position: relative;
             overflow: hidden;
         }
@@ -133,47 +127,46 @@ def render_theme() -> None:
         .hero-shell::before {
             content: "";
             position: absolute;
-            width: 280px;
-            height: 280px;
+            width: 300px;
+            height: 300px;
             top: -120px;
-            right: -60px;
-            border-radius: 32px;
-            transform: rotate(24deg);
-            background: linear-gradient(180deg, rgba(255, 122, 69, 0.28), rgba(255, 122, 69, 0.03));
+            right: -70px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(234, 107, 69, 0.16), transparent 66%);
         }
 
         .hero-shell::after {
             content: "";
             position: absolute;
-            inset: auto auto -90px -60px;
-            width: 260px;
-            height: 260px;
+            inset: auto auto -110px -80px;
+            width: 280px;
+            height: 280px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(47, 166, 127, 0.22), transparent 68%);
+            background: radial-gradient(circle, rgba(122, 111, 240, 0.16), transparent 68%);
         }
 
         .eyebrow {
             text-transform: uppercase;
             letter-spacing: 0.22em;
             font-size: 0.72rem;
-            color: rgba(255,255,255,0.62);
+            color: rgba(23, 23, 27, 0.46);
             margin-bottom: 0.8rem;
         }
 
         .hero-title {
-            font-size: clamp(3.2rem, 6.8vw, 6rem);
-            line-height: 0.88;
+            font-size: clamp(3rem, 6vw, 5.5rem);
+            line-height: 0.9;
             margin: 0;
-            color: #ffffff;
-            font-weight: 700;
-            max-width: 7ch;
+            color: var(--ink);
+            font-weight: 800;
+            max-width: 8ch;
         }
 
         .hero-subtitle {
             margin-top: 1rem;
-            max-width: 38rem;
+            max-width: 42rem;
             font-size: 1.02rem;
-            color: rgba(255,255,255,0.78);
+            color: var(--muted);
             line-height: 1.8;
         }
 
@@ -181,95 +174,62 @@ def render_theme() -> None:
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 0.85rem;
-            margin-top: 1.45rem;
+            margin-top: 1.4rem;
         }
 
         .note-chip {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.66);
+            border: 1px solid rgba(23,23,27,0.06);
             border-radius: 20px;
             padding: 1rem 1rem 0.95rem 1rem;
-            color: rgba(255,255,255,0.78);
-            backdrop-filter: blur(6px);
+            color: var(--muted);
+            backdrop-filter: blur(10px);
         }
 
         .note-chip strong {
             display: block;
             margin-bottom: 0.2rem;
-            color: #ffffff;
+            color: var(--ink);
         }
 
-        .section-card {
-            background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(249,243,236,0.84));
-            border: 1px solid var(--line);
-            border-radius: 26px;
-            padding: 1.25rem 1.3rem 1rem 1.3rem;
-            box-shadow: var(--shadow-soft);
-            margin-top: 1rem;
-            margin-bottom: 1rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .section-card::after {
-            content: "";
-            position: absolute;
-            inset: 0 auto 0 0;
-            width: 8px;
-            background: linear-gradient(180deg, var(--copper), var(--sage), var(--navy));
-        }
-
-        .section-label {
-            font-size: 0.74rem;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--copper);
-            margin-bottom: 0.35rem;
-        }
-
-        .section-title {
-            font-size: 1.45rem;
-            margin: 0;
-            color: #1d2830;
-        }
-
-        .composer-shell {
+        .composer-shell,
+        .input-shell {
             display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 1.1rem;
+            gap: 1rem;
             margin-bottom: 1.3rem;
         }
 
-        .workbench-shell {
-            display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 1rem;
+        .composer-shell {
+            grid-template-columns: 1.08fr 0.92fr;
+        }
+
+        .input-shell {
+            grid-template-columns: 1.18fr 0.82fr;
             align-items: start;
-            margin-bottom: 1.4rem;
         }
 
         .composer-panel,
         .side-note-panel,
-        .result-frame,
         .input-stage,
-        .tower-panel {
-            background: linear-gradient(180deg, rgba(255,255,255,0.90), rgba(248,242,235,0.80));
+        .action-stage,
+        .section-card,
+        .result-frame {
+            background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(251,246,240,0.84));
             border: 1px solid var(--line);
-            border-radius: 26px;
+            border-radius: 24px;
             box-shadow: var(--shadow-soft);
         }
 
-        .composer-panel {
-            padding: 1.25rem 1.25rem 1rem 1.25rem;
-            position: relative;
-            overflow: hidden;
+        .composer-panel,
+        .side-note-panel,
+        .input-stage,
+        .action-stage {
+            padding: 1.2rem;
         }
 
-        .side-note-panel {
-            padding: 1.2rem;
-            background: linear-gradient(180deg, rgba(26,33,58,0.96), rgba(34,47,84,0.92));
-            color: rgba(255,255,255,0.86);
-            transform: translateY(28px);
+        .composer-panel {
+            position: relative;
+            overflow: hidden;
         }
 
         .composer-panel::after {
@@ -279,19 +239,24 @@ def render_theme() -> None:
             top: 14px;
             font-size: 0.74rem;
             letter-spacing: 0.28em;
-            color: rgba(27, 42, 82, 0.16);
+            color: rgba(234, 107, 69, 0.14);
+        }
+
+        .side-note-panel {
+            background: linear-gradient(180deg, rgba(255,246,238,0.96), rgba(245,236,230,0.92));
+            transform: translateY(20px);
         }
 
         .panel-kicker {
             font-size: 0.75rem;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            color: var(--copper);
+            color: var(--accent);
             margin-bottom: 0.35rem;
         }
 
         .panel-title {
-            font-size: 1.6rem;
+            font-size: 1.55rem;
             margin: 0 0 0.35rem 0;
             color: #1c262d;
             line-height: 1.15;
@@ -307,69 +272,88 @@ def render_theme() -> None:
         .micro-list {
             margin: 0.8rem 0 0 0;
             padding-left: 1rem;
-            color: rgba(255,255,255,0.80);
+            color: var(--muted);
             line-height: 1.8;
         }
 
-        .side-note-panel .panel-kicker,
-        .side-note-panel .panel-title {
-            color: #ffffff;
+        .action-stage {
+            position: relative;
+            overflow: hidden;
         }
 
-        .input-stage {
-            padding: 1.25rem;
+        .action-stage::after {
+            content: "";
+            position: absolute;
+            width: 170px;
+            height: 170px;
+            right: -40px;
+            top: -40px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(31, 138, 130, 0.14), transparent 70%);
         }
 
-        .tower-panel {
-            padding: 1.2rem;
-            background: linear-gradient(180deg, rgba(26,36,76,0.98), rgba(33,54,111,0.94));
-            color: rgba(255,255,255,0.88);
-            position: sticky;
-            top: 1.2rem;
-        }
-
-        .tower-panel .panel-kicker,
-        .tower-panel .panel-title {
-            color: #ffffff;
-        }
-
-        .tower-copy {
-            color: rgba(255,255,255,0.74);
+        .action-copy {
+            color: var(--muted);
             line-height: 1.75;
             font-size: 0.96rem;
             margin: 0.4rem 0 1rem 0;
         }
 
-        .tower-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-            margin-top: 0.9rem;
+        .action-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            margin-top: 0.8rem;
             margin-bottom: 1rem;
         }
 
-        .tower-stat {
-            background: rgba(255,255,255,0.10);
-            border: 1px solid rgba(255,255,255,0.10);
-            border-radius: 18px;
-            padding: 0.85rem 0.9rem;
-        }
-
-        .tower-stat strong {
-            display: block;
-            color: #ffffff;
-            margin-bottom: 0.2rem;
-        }
-
-        .tower-stat span {
+        .action-pill {
+            background: rgba(234, 107, 69, 0.10);
+            border: 1px solid rgba(234, 107, 69, 0.14);
+            border-radius: 999px;
+            padding: 0.46rem 0.8rem;
             font-size: 0.88rem;
-            color: rgba(255,255,255,0.68);
+            color: var(--ink);
+        }
+
+        .action-button-stack {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .section-card {
+            padding: 1.2rem 1.25rem 0.95rem 1.25rem;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section-card::after {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 8px;
+            background: linear-gradient(180deg, var(--accent), var(--teal), var(--violet));
+        }
+
+        .section-label {
+            font-size: 0.74rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 0.35rem;
+        }
+
+        .section-title {
+            font-size: 1.42rem;
+            margin: 0;
+            color: #1d2830;
         }
 
         .result-frame {
-            padding: 1.15rem 1.35rem 1.2rem 1.35rem;
+            padding: 1.1rem 1.3rem 1.15rem 1.3rem;
             margin-top: 1rem;
-            background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,242,235,0.84));
         }
 
         .result-frame h3 {
@@ -377,34 +361,23 @@ def render_theme() -> None:
             margin-bottom: 0.4rem;
         }
 
-        .result-frame p, .result-frame li {
+        .result-frame p,
+        .result-frame li {
             font-size: 1.02rem;
-            line-height: 1.95;
+            line-height: 1.92;
         }
 
         @media (max-width: 900px) {
-            .note-grid {
+            .note-grid, .composer-shell, .input-shell {
                 grid-template-columns: 1fr;
             }
 
             .hero-shell {
-                padding: 1.4rem 1.2rem 1.2rem 1.2rem;
-            }
-
-            .composer-shell {
-                grid-template-columns: 1fr;
-            }
-
-            .workbench-shell {
-                grid-template-columns: 1fr;
+                padding: 1.45rem 1.2rem 1.2rem 1.2rem;
             }
 
             .side-note-panel {
                 transform: none;
-            }
-
-            .tower-panel {
-                position: static;
             }
         }
         </style>
@@ -417,11 +390,11 @@ def render_header() -> None:
     st.markdown(
         """
         <section class="hero-shell">
-            <div class="eyebrow">Course Intelligence Workspace</div>
+            <div class="eyebrow">Course Studio</div>
             <h1 class="hero-title">课程总结生成器</h1>
             <p class="hero-subtitle">
-                将课件、字幕与课堂材料快速整理成结构化学习资产。
-                支持生成讲义式总结、英文测验与可导出的复习材料，适合课程团队、学生与培训场景直接使用。
+                把课件、字幕和课堂材料整理成更可读、更可复习的输出。
+                它应该像一张有呼吸感的工作台，而不是一张死板的表格。
             </p>
             <div class="note-grid">
                 <div class="note-chip">
@@ -470,25 +443,21 @@ def render_composer_intro() -> None:
     )
 
 
-def render_control_tower() -> None:
+def render_action_stage() -> None:
     st.markdown(
         """
-        <section class="tower-panel">
-            <div class="panel-kicker">Control Tower</div>
-            <h2 class="panel-title">把操作区从表单里解放出来</h2>
-            <p class="tower-copy">
-                这一栏专门负责生成、重置与状态感知。输入材料留在左侧，操作决策放到右侧，
-                页面因此会更像一套有个性的内容工作台，而不是顺序填表。
+        <section class="action-stage">
+            <div class="panel-kicker">Action Stage</div>
+            <h2 class="panel-title">把操作放到这一侧，但别让它压住整张页面</h2>
+            <p class="action-copy">
+                这里负责生成、重置和切换输出模式。材料输入留在左边，
+                动作与节奏留在右边，让布局更自由，但依然顺手。
             </p>
-            <div class="tower-stats">
-                <div class="tower-stat">
-                    <strong>Input</strong>
-                    <span>PDF / TXT / Mixed</span>
-                </div>
-                <div class="tower-stat">
-                    <strong>Output</strong>
-                    <span>Notes / Quiz / PDF</span>
-                </div>
+            <div class="action-pills">
+                <span class="action-pill">PDF / TXT / Mixed</span>
+                <span class="action-pill">Summary</span>
+                <span class="action-pill">Quiz</span>
+                <span class="action-pill">Export</span>
             </div>
         </section>
         """,
@@ -506,6 +475,7 @@ def init_state() -> None:
         "quiz_submitted": False,
         "quiz_score": 0,
         "quiz_feedback": [],
+        "_trigger_generate": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -522,6 +492,7 @@ def reset_state() -> None:
         "quiz_submitted",
         "quiz_score",
         "quiz_feedback",
+        "_trigger_generate",
     ]
     for key in keys:
         if key in st.session_state:
@@ -644,31 +615,30 @@ def main() -> None:
     render_header()
     render_composer_intro()
 
-    left_rail, right_rail = st.columns([1.18, 0.82], gap="large")
+    left_col, right_col = st.columns([1.18, 0.82], gap="large")
 
-    with left_rail:
+    with left_col:
         st.markdown('<section class="input-stage">', unsafe_allow_html=True)
         upload_col1, upload_col2 = st.columns(2)
-
         with upload_col1:
             pdf_file = st.file_uploader("上传 PDF 课件", type=["pdf"])
-
         with upload_col2:
             txt_file = st.file_uploader("上传 TXT 字幕", type=["txt"])
-
         course_name = st.text_input("课程名称 / 本次主题（可选）", placeholder="例如：Project Management - Stakeholder Analysis")
         st.markdown("</section>", unsafe_allow_html=True)
 
-    with right_rail:
-        render_control_tower()
+    with right_col:
+        render_action_stage()
+        st.markdown('<div class="action-button-stack">', unsafe_allow_html=True)
         generate_quiz = st.checkbox("同时生成英文单选题 Quiz", value=False)
         if st.button("生成课程总结", type="primary", use_container_width=True):
             st.session_state["_trigger_generate"] = True
         if st.button("重置页面", use_container_width=True):
             reset_state()
             st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    if st.session_state.get("_trigger_generate"):
+    if st.session_state["_trigger_generate"]:
         st.session_state["_trigger_generate"] = False
         if not pdf_file and not txt_file:
             st.error("请至少上传一个 PDF 课件或 TXT 字幕文件。")
@@ -684,6 +654,7 @@ def main() -> None:
                     transcript_text=transcript_text,
                     course_name=course_name.strip(),
                 )
+
                 quiz_markdown = ""
                 if generate_quiz:
                     quiz_markdown = generate_quiz_material(
@@ -691,6 +662,7 @@ def main() -> None:
                         transcript_text=transcript_text,
                         course_name=course_name.strip(),
                     )
+
                 st.session_state.summary_markdown = summary
                 st.session_state.quiz_markdown = quiz_markdown
                 st.session_state.pdf_text_preview = pdf_text
@@ -728,8 +700,8 @@ def main() -> None:
             course_name=course_name.strip() or "课程总结",
         )
 
-        col_download_1, col_download_2 = st.columns(2)
-        with col_download_1:
+        download_col1, download_col2 = st.columns(2)
+        with download_col1:
             st.download_button(
                 label="下载 Markdown",
                 data=st.session_state.summary_markdown,
@@ -737,8 +709,7 @@ def main() -> None:
                 mime="text/markdown",
                 use_container_width=True,
             )
-
-        with col_download_2:
+        with download_col2:
             st.download_button(
                 label="下载 PDF",
                 data=pdf_bytes,
