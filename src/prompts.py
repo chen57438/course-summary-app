@@ -3,17 +3,19 @@ from __future__ import annotations
 
 def build_summary_prompt(pdf_text: str, transcript_text: str, course_name: str = "") -> str:
     course_line = f"补充课程名称或主题：{course_name}\n" if course_name else ""
+    pdf_section = pdf_text if pdf_text.strip() else "未提供 PDF 课件内容。"
+    transcript_section = transcript_text if transcript_text.strip() else "未提供 TXT 字幕内容。"
 
     return f"""
 # Role
 你是一位拥有 PMP 认证和丰富教学经验的“项目管理”专业助教。你擅长将复杂的英文学术讲座转化为条理清晰、中英双语对照的学习笔记。
 
 # Input Data
-1. 【课件内容 (PDF)】: {pdf_text} (这是课程的骨架和视觉重点)
-2. 【讲稿字幕 (TXT)】: {transcript_text} (这是教授口述的细节、案例和解释)
+1. 【课件内容 (PDF)】: {pdf_section} (这是课程的骨架和视觉重点)
+2. 【讲稿字幕 (TXT)】: {transcript_section} (这是教授口述的细节、案例和解释)
 
 # Task
-请结合课件和讲稿，进行深度融合总结。你的目标是让学生即便没看视频，也能掌握本节课的核心知识。
+请根据已提供的材料生成总结：如果同时有课件和讲稿，就做融合总结；如果只提供其中一种材料，就基于该材料独立总结核心知识点。你的目标是让学生即便没看视频，也能掌握本节课的核心知识。
 请把输出写成“高质量课程讲义式笔记”，而不是简短摘要。
 
 # Constraint & Style (极其重要)
@@ -42,6 +44,7 @@ def build_summary_prompt(pdf_text: str, transcript_text: str, course_name: str =
    - 再补教授案例、提醒或类比
 12. 优先保留教授在讲稿里对概念的口头解释，因为这通常比课件标题更有学习价值。
 13. 如果课件只是列提纲，而教授补充了具体情境、案例或误区，请优先写教授补充内容。
+14. 如果只提供一种材料，不要提及缺失材料，也不要假装引用另一种材料。
 
 # Output Schema
 请严格按以下结构输出：
@@ -81,4 +84,58 @@ def build_summary_prompt(pdf_text: str, transcript_text: str, course_name: str =
 
 # Execution
 现在，请开始分析上方提供的数据。
+""".strip()
+
+
+def build_quiz_prompt(pdf_text: str, transcript_text: str, course_name: str = "") -> str:
+    course_line = f"Course name or topic: {course_name}\n" if course_name else ""
+    pdf_section = pdf_text if pdf_text.strip() else "No PDF slide content was provided."
+    transcript_section = transcript_text if transcript_text.strip() else "No TXT transcript content was provided."
+
+    return f"""
+# Role
+You are an experienced university teaching assistant in project management. Your task is to create a high-quality multiple-choice quiz in English based on the lecture slides and lecture transcript.
+
+# Input Data
+1. Slides content: {pdf_section}
+2. Transcript content: {transcript_section}
+
+# Task
+Create an English-only single-choice quiz that helps students review the lecture. If both sources are provided, combine them. If only one source is provided, generate the quiz based only on that source.
+
+# Requirements
+1. The entire quiz must be in English.
+2. Each question must have exactly 4 options: A, B, C, D.
+3. Only one option can be correct.
+4. Focus on meaningful understanding, not trivial wording details.
+5. Prioritize:
+   - key concepts and definitions
+   - differences between similar ideas
+   - frameworks, processes, and terms
+   - examples mentioned by the professor
+   - common mistakes or exam-style traps
+6. Questions should be clear, concise, and academically useful.
+7. Avoid duplicate questions.
+8. Create 8-12 questions if the material supports it.
+9. Do not mention missing sources in the output.
+
+# Output Format
+Return the quiz in Markdown using exactly this structure:
+
+## Quiz
+
+1. Question text
+   - A. Option A
+   - B. Option B
+   - C. Option C
+   - D. Option D
+   - Answer: B
+   - Explanation: Short explanation in English.
+
+Repeat the same format for all questions.
+
+{course_line}
+
+# Execution
+Now generate the quiz.
 """.strip()

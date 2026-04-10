@@ -7,7 +7,7 @@ import google.generativeai as genai
 import streamlit as st
 from google.api_core.exceptions import ResourceExhausted, RetryError, ServiceUnavailable
 
-from src.prompts import build_summary_prompt
+from src.prompts import build_quiz_prompt, build_summary_prompt
 
 
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
@@ -85,17 +85,35 @@ def summarize_course_material(
     transcript_text: str,
     course_name: str = "",
 ) -> str:
-    if not pdf_text.strip():
-        raise ValueError("PDF 提取结果为空，无法生成总结。")
-
-    if not transcript_text.strip():
-        raise ValueError("TXT 字幕内容为空，无法生成总结。")
+    if not pdf_text.strip() and not transcript_text.strip():
+        raise ValueError("请至少上传一个 PDF 课件或 TXT 字幕文件。")
 
     _configure_client()
     model = _get_model()
     clipped_pdf_text = _clip_text(pdf_text, MAX_PDF_CHARS)
     clipped_transcript_text = _clip_text(transcript_text, MAX_TRANSCRIPT_CHARS)
     prompt = build_summary_prompt(
+        pdf_text=clipped_pdf_text,
+        transcript_text=clipped_transcript_text,
+        course_name=course_name,
+    )
+
+    return _generate_text(model, prompt)
+
+
+def generate_quiz_material(
+    pdf_text: str,
+    transcript_text: str,
+    course_name: str = "",
+) -> str:
+    if not pdf_text.strip() and not transcript_text.strip():
+        raise ValueError("请至少上传一个 PDF 课件或 TXT 字幕文件来生成 quiz。")
+
+    _configure_client()
+    model = _get_model()
+    clipped_pdf_text = _clip_text(pdf_text, MAX_PDF_CHARS)
+    clipped_transcript_text = _clip_text(transcript_text, MAX_TRANSCRIPT_CHARS)
+    prompt = build_quiz_prompt(
         pdf_text=clipped_pdf_text,
         transcript_text=clipped_transcript_text,
         course_name=course_name,
