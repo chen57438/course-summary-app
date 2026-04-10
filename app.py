@@ -20,29 +20,30 @@ def render_theme() -> None:
         """
         <style>
         :root {
-            --bg: #f4f7fb;
-            --bg-deep: #e9eff7;
-            --ink: #101828;
-            --muted: #5f6b7a;
-            --accent: #1459c7;
-            --accent-deep: #0f3f8f;
-            --success: #0f766e;
-            --line: rgba(16, 24, 40, 0.08);
-            --card: rgba(255, 255, 255, 0.88);
-            --shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
-            --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.05);
+            --bg: #f6f1ea;
+            --ink: #12131a;
+            --muted: #615b57;
+            --navy: #1b2a52;
+            --copper: #b85c38;
+            --sage: #5d7a6f;
+            --sand: #efe1cf;
+            --line: rgba(18, 19, 26, 0.09);
+            --card: rgba(255, 251, 246, 0.82);
+            --shadow: 0 22px 52px rgba(35, 25, 20, 0.10);
+            --shadow-soft: 0 10px 28px rgba(35, 25, 20, 0.06);
         }
 
         .stApp {
             background:
-                radial-gradient(circle at top left, rgba(20, 89, 199, 0.10), transparent 26%),
-                linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+                radial-gradient(circle at 10% 10%, rgba(184, 92, 56, 0.18), transparent 22%),
+                radial-gradient(circle at 82% 16%, rgba(27, 42, 82, 0.16), transparent 26%),
+                linear-gradient(180deg, #fcf8f4 0%, var(--bg) 100%);
             color: var(--ink);
         }
 
         .main .block-container {
-            max-width: 1180px;
-            padding-top: 1.4rem;
+            max-width: 1240px;
+            padding-top: 1.2rem;
             padding-bottom: 4rem;
         }
 
@@ -52,7 +53,7 @@ def render_theme() -> None:
         }
 
         [data-testid="stSidebar"] {
-            background: rgba(248, 250, 252, 0.94);
+            background: rgba(251, 246, 240, 0.94);
             border-right: 1px solid var(--line);
         }
 
@@ -65,7 +66,7 @@ def render_theme() -> None:
         div[data-testid="stExpander"] {
             background: var(--card);
             border: 1px solid var(--line);
-            border-radius: 20px;
+            border-radius: 24px;
             box-shadow: var(--shadow-soft);
         }
 
@@ -82,34 +83,34 @@ def render_theme() -> None:
         div[data-testid="stTextInput"] label,
         div[data-testid="stFileUploader"] label,
         div[data-testid="stCheckbox"] label {
-            color: #344054 !important;
+            color: var(--navy) !important;
             font-weight: 600;
         }
 
         .stButton > button,
         .stDownloadButton > button,
         div[data-testid="stFormSubmitButton"] button {
-            border-radius: 14px;
-            border: 1px solid rgba(20, 89, 199, 0.10);
-            background: linear-gradient(180deg, #1663d6 0%, var(--accent) 100%);
+            border-radius: 18px;
+            border: 1px solid rgba(27, 42, 82, 0.10);
+            background: linear-gradient(135deg, var(--navy) 0%, #31467a 100%);
             color: #ffffff;
             font-weight: 600;
             letter-spacing: 0.01em;
-            box-shadow: 0 12px 28px rgba(20, 89, 199, 0.18);
-            min-height: 3rem;
+            box-shadow: 0 16px 34px rgba(27, 42, 82, 0.18);
+            min-height: 3.2rem;
         }
 
         .stDownloadButton > button {
-            background: #ffffff;
+            background: linear-gradient(135deg, #ffffff 0%, #fbf3eb 100%);
             color: var(--ink);
-            border: 1px solid rgba(16, 24, 40, 0.10);
+            border: 1px solid rgba(18, 19, 26, 0.10);
             box-shadow: var(--shadow-soft);
         }
 
         .stButton > button:hover,
         .stDownloadButton > button:hover,
         div[data-testid="stFormSubmitButton"] button:hover {
-            border-color: rgba(20, 89, 199, 0.22);
+            border-color: rgba(27, 42, 82, 0.22);
         }
 
         [data-testid="stMarkdownContainer"] p {
@@ -118,10 +119,10 @@ def render_theme() -> None:
 
         .hero-shell {
             background:
-                linear-gradient(135deg, rgba(16,24,40,0.96), rgba(19,67,149,0.92));
+                linear-gradient(135deg, rgba(24,26,34,0.98), rgba(29,43,78,0.94));
             border: 1px solid var(--line);
-            border-radius: 28px;
-            padding: 2.2rem 2.1rem 1.9rem 2.1rem;
+            border-radius: 38px;
+            padding: 2.4rem 2.3rem 2.1rem 2.3rem;
             box-shadow: var(--shadow);
             margin-bottom: 1.4rem;
             position: relative;
@@ -131,44 +132,45 @@ def render_theme() -> None:
         .hero-shell::before {
             content: "";
             position: absolute;
-            width: 260px;
-            height: 260px;
-            top: -100px;
-            right: -40px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,255,255,0.10), transparent 68%);
+            width: 280px;
+            height: 280px;
+            top: -120px;
+            right: -60px;
+            border-radius: 32px;
+            transform: rotate(24deg);
+            background: linear-gradient(180deg, rgba(184, 92, 56, 0.20), rgba(184, 92, 56, 0.02));
         }
 
         .hero-shell::after {
             content: "";
             position: absolute;
-            inset: auto auto -70px -50px;
-            width: 240px;
-            height: 240px;
+            inset: auto auto -90px -60px;
+            width: 260px;
+            height: 260px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
+            background: radial-gradient(circle, rgba(93, 122, 111, 0.18), transparent 68%);
         }
 
         .eyebrow {
             text-transform: uppercase;
-            letter-spacing: 0.18em;
-            font-size: 0.74rem;
-            color: rgba(255,255,255,0.72);
+            letter-spacing: 0.22em;
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.62);
             margin-bottom: 0.8rem;
         }
 
         .hero-title {
-            font-size: clamp(2.8rem, 5.8vw, 4.8rem);
-            line-height: 0.92;
+            font-size: clamp(3.2rem, 6.8vw, 6rem);
+            line-height: 0.88;
             margin: 0;
             color: #ffffff;
             font-weight: 700;
-            max-width: 10ch;
+            max-width: 7ch;
         }
 
         .hero-subtitle {
             margin-top: 1rem;
-            max-width: 46rem;
+            max-width: 38rem;
             font-size: 1.02rem;
             color: rgba(255,255,255,0.78);
             line-height: 1.8;
@@ -182,9 +184,9 @@ def render_theme() -> None:
         }
 
         .note-chip {
-            background: rgba(255,255,255,0.10);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 18px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 20px;
             padding: 1rem 1rem 0.95rem 1rem;
             color: rgba(255,255,255,0.78);
             backdrop-filter: blur(6px);
@@ -197,10 +199,10 @@ def render_theme() -> None:
         }
 
         .section-card {
-            background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(252,253,255,0.82));
+            background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(249,243,236,0.84));
             border: 1px solid var(--line);
-            border-radius: 22px;
-            padding: 1.2rem 1.25rem 1rem 1.25rem;
+            border-radius: 26px;
+            padding: 1.25rem 1.3rem 1rem 1.3rem;
             box-shadow: var(--shadow-soft);
             margin-top: 1rem;
             margin-bottom: 1rem;
@@ -211,16 +213,16 @@ def render_theme() -> None:
         .section-card::after {
             content: "";
             position: absolute;
-            inset: auto 0 0 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--accent), #4f8df0);
+            inset: 0 auto 0 0;
+            width: 8px;
+            background: linear-gradient(180deg, var(--copper), var(--navy));
         }
 
         .section-label {
             font-size: 0.74rem;
             letter-spacing: 0.14em;
             text-transform: uppercase;
-            color: var(--accent);
+            color: var(--copper);
             margin-bottom: 0.35rem;
         }
 
@@ -232,52 +234,53 @@ def render_theme() -> None:
 
         .composer-shell {
             display: grid;
-            grid-template-columns: 1fr 0.72fr;
-            gap: 1rem;
-            margin-bottom: 1.2rem;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 1.1rem;
+            margin-bottom: 1.3rem;
         }
 
         .composer-panel,
         .side-note-panel,
         .result-frame {
-            background: linear-gradient(180deg, rgba(255,255,255,0.90), rgba(250,252,255,0.84));
+            background: linear-gradient(180deg, rgba(255,255,255,0.90), rgba(248,242,235,0.80));
             border: 1px solid var(--line);
-            border-radius: 20px;
+            border-radius: 26px;
             box-shadow: var(--shadow-soft);
         }
 
         .composer-panel {
-            padding: 1.2rem 1.2rem 1rem 1.2rem;
+            padding: 1.25rem 1.25rem 1rem 1.25rem;
             position: relative;
             overflow: hidden;
         }
 
         .side-note-panel {
             padding: 1.2rem;
-            transform: none;
-            background: linear-gradient(180deg, rgba(247,250,255,0.96), rgba(240,245,252,0.92));
+            background: linear-gradient(180deg, rgba(26,33,58,0.96), rgba(34,47,84,0.92));
+            color: rgba(255,255,255,0.86);
+            transform: translateY(28px);
         }
 
         .composer-panel::after {
-            content: "WORKSPACE";
+            content: "STUDIO";
             position: absolute;
             right: 18px;
             top: 14px;
             font-size: 0.74rem;
             letter-spacing: 0.28em;
-            color: rgba(20, 89, 199, 0.16);
+            color: rgba(27, 42, 82, 0.16);
         }
 
         .panel-kicker {
             font-size: 0.75rem;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            color: var(--accent);
+            color: var(--copper);
             margin-bottom: 0.35rem;
         }
 
         .panel-title {
-            font-size: 1.38rem;
+            font-size: 1.6rem;
             margin: 0 0 0.35rem 0;
             color: #1c262d;
             line-height: 1.15;
@@ -293,14 +296,19 @@ def render_theme() -> None:
         .micro-list {
             margin: 0.8rem 0 0 0;
             padding-left: 1rem;
-            color: var(--muted);
+            color: rgba(255,255,255,0.80);
             line-height: 1.8;
+        }
+
+        .side-note-panel .panel-kicker,
+        .side-note-panel .panel-title {
+            color: #ffffff;
         }
 
         .result-frame {
             padding: 1.15rem 1.35rem 1.2rem 1.35rem;
             margin-top: 1rem;
-            background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,253,0.86));
+            background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,242,235,0.84));
         }
 
         .result-frame h3 {
