@@ -107,17 +107,23 @@ Create an English-only single-choice quiz that helps students review the lecture
 1. The entire quiz must be in English.
 2. Each question must have exactly 4 options: A, B, C, D.
 3. Only one option can be correct.
-4. Focus on meaningful understanding, not trivial wording details.
+4. Focus on core knowledge points themselves, not overly indirect scenario puzzles.
 5. Prioritize:
    - key concepts and definitions
    - differences between similar ideas
    - frameworks, processes, and terms
-   - examples mentioned by the professor
-   - common mistakes or exam-style traps
-6. Questions should be clear, concise, and academically useful.
+   - examples mentioned by the professor, only when they directly test understanding of a concept
+   - common mistakes or exam-style traps tied to the lecture content
+6. Questions should feel like review questions for lecture knowledge, not generic reasoning puzzles.
 7. Avoid duplicate questions.
 8. Create 8-12 questions if the material supports it.
 9. Do not mention missing sources in the output.
+10. Prefer asking about:
+   - what a concept means
+   - why it matters
+   - how it differs from another concept
+   - what step belongs to which process
+   - which example best illustrates a specific knowledge point
 
 # Output Format
 Return the quiz in Markdown using exactly this structure:

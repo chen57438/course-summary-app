@@ -15,6 +15,126 @@ st.set_page_config(
 )
 
 
+def init_state() -> None:
+    defaults = {
+        "summary_markdown": "",
+        "quiz_markdown": "",
+        "pdf_text_preview": "",
+        "transcript_text_preview": "",
+        "quiz_items": [],
+        "quiz_submitted": False,
+        "quiz_score": 0,
+        "quiz_feedback": [],
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+def reset_state() -> None:
+    keys = [
+        "summary_markdown",
+        "quiz_markdown",
+        "pdf_text_preview",
+        "transcript_text_preview",
+        "quiz_items",
+        "quiz_submitted",
+        "quiz_score",
+        "quiz_feedback",
+    ]
+    for key in keys:
+        if key in st.session_state:
+            del st.session_state[key]
+    init_state()
+
+
+def render_quiz_section() -> None:
+    if not st.session_state.quiz_markdown:
+        return
+
+    st.subheader("English Quiz")
+
+    if not st.session_state.quiz_items:
+        st.warning("Quiz 已生成，但暂时无法解析成交互式题目。")
+        st.download_button(
+            label="下载 Quiz Markdown（含答案）",
+            data=st.session_state.quiz_markdown,
+            file_name="course_quiz.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
+        return
+
+    with st.form("quiz_form"):
+        user_answers: list[str] = []
+        for index, item in enumerate(st.session_state.quiz_items, start=1):
+            st.markdown(f"**{index}. {item['question']}**")
+            labels = [f"{option}. {item['options'][option]}" for option in ("A", "B", "C", "D")]
+            answer = st.radio(
+                f"Select your answer for Question {index}",
+                labels,
+                index=None,
+                key=f"quiz_q_{index}",
+                label_visibility="collapsed",
+            )
+            user_answers.append(answer[0] if answer else "")
+
+        submitted = st.form_submit_button("提交 Quiz")
+
+    if submitted:
+        score = 0
+        feedback: list[dict] = []
+        for index, item in enumerate(st.session_state.quiz_items, start=1):
+            selected = user_answers[index - 1]
+            correct = item["answer"]
+            is_correct = selected == correct
+            if is_correct:
+                score += 1
+            feedback.append(
+                {
+                    "selected": selected,
+                    "correct": correct,
+                    "is_correct": is_correct,
+                    "item": item,
+                }
+            )
+        st.session_state.quiz_submitted = True
+        st.session_state.quiz_score = score
+        st.session_state.quiz_feedback = feedback
+
+    if st.session_state.quiz_submitted:
+        for index, feedback in enumerate(st.session_state.quiz_feedback, start=1):
+            item = feedback["item"]
+            selected = feedback["selected"]
+            correct = feedback["correct"]
+            is_correct = feedback["is_correct"]
+            st.markdown(f"### Question {index}")
+            if selected:
+                if is_correct:
+                    st.success(f"Your answer: {selected}  |  Correct answer: {correct}")
+                else:
+                    st.error(f"Your answer: {selected}  |  Correct answer: {correct}")
+            else:
+                st.warning(f"You did not select an answer. Correct answer: {correct}")
+
+            for option in ("A", "B", "C", "D"):
+                option_text = item["options"].get(option, "")
+                explanation = item["explanations"].get(option, "")
+                st.markdown(f"- **{option}. {option_text}**")
+                if explanation:
+                    st.markdown(f"  Explanation: {explanation}")
+
+        st.info(f"Quiz score: {st.session_state.quiz_score} / {len(st.session_state.quiz_items)}")
+
+    st.download_button(
+        label="下载 Quiz Markdown（含答案）",
+        data=st.session_state.quiz_markdown,
+        file_name="course_quiz.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
+
+
 def render_sidebar() -> None:
     st.sidebar.title("使用说明")
     st.sidebar.markdown(
@@ -29,10 +149,17 @@ def render_sidebar() -> None:
 
 
 def main() -> None:
+    init_state()
     render_sidebar()
 
     st.title("课程总结生成器")
     st.caption("基于课件与讲课字幕，生成结构化中文讲义式总结")
+
+    top_col1, top_col2 = st.columns([3, 1])
+    with top_col2:
+        if st.button("重置页面", use_container_width=True):
+            reset_state()
+            st.rerun()
 
     col1, col2 = st.columns(2)
 
@@ -67,6 +194,14 @@ def main() -> None:
                         transcript_text=transcript_text,
                         course_name=course_name.strip(),
                     )
+                st.session_state.summary_markdown = summary
+                st.session_state.quiz_markdown = quiz_markdown
+                st.session_state.pdf_text_preview = pdf_text
+                st.session_state.transcript_text_preview = transcript_text
+                st.session_state.quiz_items = parse_quiz_markdown(quiz_markdown) if quiz_markdown else []
+                st.session_state.quiz_submitted = False
+                st.session_state.quiz_score = 0
+                st.session_state.quiz_feedback = []
             except ValueError as exc:
                 st.error(str(exc))
                 return
@@ -77,11 +212,12 @@ def main() -> None:
 
         st.success("总结生成完成。")
 
+    if st.session_state.summary_markdown:
         st.subheader("课程总结")
-        st.markdown(summary)
+        st.markdown(st.session_state.summary_markdown)
 
         pdf_bytes = build_summary_pdf(
-            summary_markdown=summary,
+            summary_markdown=st.session_state.summary_markdown,
             course_name=course_name.strip() or "课程总结",
         )
 
@@ -89,7 +225,7 @@ def main() -> None:
         with col_download_1:
             st.download_button(
                 label="下载 Markdown",
-                data=summary,
+                data=st.session_state.summary_markdown,
                 file_name="course_summary.md",
                 mime="text/markdown",
                 use_container_width=True,
@@ -104,82 +240,15 @@ def main() -> None:
                 use_container_width=True,
             )
 
-        if generate_quiz and quiz_markdown:
-            quiz_items = parse_quiz_markdown(quiz_markdown)
-            st.subheader("English Quiz")
+    render_quiz_section()
 
-            if not quiz_items:
-                st.warning("Quiz 已生成，但暂时无法解析成交互式题目。")
-                st.download_button(
-                    label="下载 Quiz Markdown",
-                    data=quiz_markdown,
-                    file_name="course_quiz.md",
-                    mime="text/markdown",
-                    use_container_width=True,
-                )
-            else:
-                with st.form("quiz_form"):
-                    user_answers: list[str] = []
-                    for index, item in enumerate(quiz_items, start=1):
-                        st.markdown(f"**{index}. {item['question']}**")
-                        labels = [
-                            f"{option}. {item['options'][option]}"
-                            for option in ("A", "B", "C", "D")
-                        ]
-                        answer = st.radio(
-                            f"Select your answer for Question {index}",
-                            labels,
-                            index=None,
-                            key=f"quiz_q_{index}",
-                            label_visibility="collapsed",
-                        )
-                        user_answers.append(answer[0] if answer else "")
+    if st.session_state.pdf_text_preview:
+        with st.expander("提取到的课件文本预览"):
+            st.text_area("PDF 内容", st.session_state.pdf_text_preview[:5000], height=240)
 
-                    submitted = st.form_submit_button("提交 Quiz")
-
-                if submitted:
-                    score = 0
-                    for index, item in enumerate(quiz_items, start=1):
-                        selected = user_answers[index - 1]
-                        correct = item["answer"]
-                        is_correct = selected == correct
-                        if is_correct:
-                            score += 1
-
-                        st.markdown(f"### Question {index}")
-                        if selected:
-                            if is_correct:
-                                st.success(f"Your answer: {selected}  |  Correct answer: {correct}")
-                            else:
-                                st.error(f"Your answer: {selected}  |  Correct answer: {correct}")
-                        else:
-                            st.warning(f"You did not select an answer. Correct answer: {correct}")
-
-                        for option in ("A", "B", "C", "D"):
-                            option_text = item["options"].get(option, "")
-                            explanation = item["explanations"].get(option, "")
-                            prefix = "Correct" if option == correct else "Option"
-                            st.markdown(f"- **{option}. {option_text}**")
-                            if explanation:
-                                st.markdown(f"  {prefix} explanation: {explanation}")
-
-                    st.info(f"Quiz score: {score} / {len(quiz_items)}")
-
-                st.download_button(
-                    label="下载 Quiz Markdown（含答案）",
-                    data=quiz_markdown,
-                    file_name="course_quiz.md",
-                    mime="text/markdown",
-                    use_container_width=True,
-                )
-
-        if pdf_text:
-            with st.expander("提取到的课件文本预览"):
-                st.text_area("PDF 内容", pdf_text[:5000], height=240)
-
-        if transcript_text:
-            with st.expander("提取到的字幕文本预览"):
-                st.text_area("TXT 内容", transcript_text[:5000], height=240)
+    if st.session_state.transcript_text_preview:
+        with st.expander("提取到的字幕文本预览"):
+            st.text_area("TXT 内容", st.session_state.transcript_text_preview[:5000], height=240)
 
 
 if __name__ == "__main__":
