@@ -204,6 +204,68 @@ def render_theme() -> None:
             color: #1d2830;
         }
 
+        .composer-shell {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .composer-panel,
+        .side-note-panel,
+        .result-frame {
+            background: rgba(255, 251, 245, 0.76);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .composer-panel {
+            padding: 1.2rem 1.2rem 0.9rem 1.2rem;
+        }
+
+        .side-note-panel {
+            padding: 1.2rem;
+        }
+
+        .panel-kicker {
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 0.35rem;
+        }
+
+        .panel-title {
+            font-size: 1.35rem;
+            margin: 0 0 0.35rem 0;
+            color: #1c262d;
+        }
+
+        .panel-copy {
+            color: var(--muted);
+            line-height: 1.8;
+            font-size: 0.98rem;
+            margin: 0;
+        }
+
+        .micro-list {
+            margin: 0.8rem 0 0 0;
+            padding-left: 1rem;
+            color: var(--muted);
+            line-height: 1.8;
+        }
+
+        .result-frame {
+            padding: 1rem 1.2rem 1.1rem 1.2rem;
+            margin-top: 1rem;
+        }
+
+        .result-frame h3 {
+            margin-top: 0.1rem;
+            margin-bottom: 0.4rem;
+        }
+
         @media (max-width: 900px) {
             .note-grid {
                 grid-template-columns: 1fr;
@@ -211,6 +273,10 @@ def render_theme() -> None:
 
             .hero-shell {
                 padding: 1.4rem 1.2rem 1.2rem 1.2rem;
+            }
+
+            .composer-shell {
+                grid-template-columns: 1fr;
             }
         }
         </style>
@@ -243,6 +309,33 @@ def render_header() -> None:
                     更柔和的页面排版，适合长时间阅读与导出。
                 </div>
             </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_composer_intro() -> None:
+    st.markdown(
+        """
+        <section class="composer-shell">
+            <div class="composer-panel">
+                <div class="panel-kicker">Input Studio</div>
+                <h2 class="panel-title">把材料交给这一页，然后慢慢长成讲义</h2>
+                <p class="panel-copy">
+                    你可以上传 PDF、TXT，或者两者一起。系统会优先整理知识结构、教授强调与可复习的术语框架，
+                    同时也兼容纯中文文档，不会为了格式感而硬塞不自然的英文表达。
+                </p>
+            </div>
+            <aside class="side-note-panel">
+                <div class="panel-kicker">Notes</div>
+                <h3 class="panel-title">这一版适合什么材料</h3>
+                <ul class="micro-list">
+                    <li>纯中文课件与字幕</li>
+                    <li>中英混合的管理课程资料</li>
+                    <li>需要同时生成 summary 与 quiz 的复习场景</li>
+                </ul>
+            </aside>
         </section>
         """,
         unsafe_allow_html=True,
@@ -387,7 +480,7 @@ def render_sidebar() -> None:
         4. 点击生成总结
         """
     )
-    st.sidebar.info("支持仅 PDF、仅 TXT，或 PDF + TXT 融合生成总结。")
+    st.sidebar.info("支持仅 PDF、仅 TXT，或 PDF + TXT 融合生成总结，也兼容纯中文文档。")
 
 
 def main() -> None:
@@ -395,6 +488,7 @@ def main() -> None:
     render_theme()
     render_sidebar()
     render_header()
+    render_composer_intro()
 
     top_col1, top_col2 = st.columns([3, 1])
     with top_col2:
@@ -463,7 +557,9 @@ def main() -> None:
             """,
             unsafe_allow_html=True,
         )
+        st.markdown('<section class="result-frame">', unsafe_allow_html=True)
         st.markdown(st.session_state.summary_markdown)
+        st.markdown("</section>", unsafe_allow_html=True)
 
         pdf_bytes = build_summary_pdf(
             summary_markdown=st.session_state.summary_markdown,
