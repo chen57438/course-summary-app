@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+import re
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
@@ -13,6 +14,14 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 
 PDF_FONT_NAME = "STSong-Light"
+EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F300-\U0001FAFF"
+    "\U00002700-\U000027BF"
+    "\U0001F1E6-\U0001F1FF"
+    "]",
+    flags=re.UNICODE,
+)
 
 
 def _ensure_cjk_font() -> None:
@@ -68,11 +77,23 @@ def _build_styles() -> dict[str, ParagraphStyle]:
 
 
 def _escape_text(text: str) -> str:
+    sanitized = _sanitize_text(text)
     return (
-        text.replace("&", "&amp;")
+        sanitized.replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace("\n", "<br/>")
+    )
+
+
+def _sanitize_text(text: str) -> str:
+    cleaned = EMOJI_PATTERN.sub("", text)
+    return (
+        cleaned.replace("•", "-")
+        .replace("\u00a0", " ")
+        .replace("\u200b", "")
+        .replace("\ufeff", "")
+        .strip()
     )
 
 
