@@ -62,6 +62,7 @@ def main() -> None:
                 st.error(str(exc))
                 return
             except Exception as exc:  # noqa: BLE001
+                st.error("生成总结时发生未预期错误，请稍后重试。")
                 st.exception(exc)
                 return
 
