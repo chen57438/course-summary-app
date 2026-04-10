@@ -15,6 +15,240 @@ st.set_page_config(
 )
 
 
+def render_theme() -> None:
+    st.markdown(
+        """
+        <style>
+        :root {
+            --paper: #f7f1e8;
+            --paper-deep: #efe4d3;
+            --ink: #1f2430;
+            --muted: #6d675f;
+            --accent: #8c5e3c;
+            --accent-deep: #603d24;
+            --line: rgba(96, 61, 36, 0.18);
+            --card: rgba(255, 251, 245, 0.78);
+            --shadow: 0 20px 60px rgba(72, 48, 30, 0.10);
+        }
+
+        .stApp {
+            background:
+                radial-gradient(circle at top left, rgba(140, 94, 60, 0.10), transparent 30%),
+                radial-gradient(circle at top right, rgba(93, 117, 92, 0.08), transparent 28%),
+                linear-gradient(180deg, #fbf7f2 0%, var(--paper) 100%);
+            color: var(--ink);
+        }
+
+        .main .block-container {
+            max-width: 1120px;
+            padding-top: 2.3rem;
+            padding-bottom: 4rem;
+        }
+
+        h1, h2, h3 {
+            color: var(--ink);
+            letter-spacing: -0.02em;
+        }
+
+        [data-testid="stSidebar"] {
+            background: rgba(250, 244, 236, 0.92);
+            border-right: 1px solid var(--line);
+        }
+
+        [data-testid="stSidebar"] * {
+            color: var(--ink);
+        }
+
+        div[data-testid="stFileUploader"] > section,
+        div[data-testid="stTextInput"] > div,
+        div[data-testid="stExpander"] {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            box-shadow: var(--shadow);
+        }
+
+        div[data-testid="stFileUploader"] > section {
+            padding: 0.75rem 0.75rem 0.25rem 0.75rem;
+        }
+
+        div[data-testid="stTextInput"] input {
+            background: transparent !important;
+            color: var(--ink) !important;
+            font-size: 1.05rem;
+        }
+
+        div[data-testid="stTextInput"] label,
+        div[data-testid="stFileUploader"] label,
+        div[data-testid="stCheckbox"] label {
+            color: var(--accent-deep) !important;
+            font-weight: 600;
+        }
+
+        .stButton > button,
+        .stDownloadButton > button,
+        div[data-testid="stFormSubmitButton"] button {
+            border-radius: 999px;
+            border: 1px solid rgba(96, 61, 36, 0.16);
+            background: linear-gradient(135deg, #2f3f35 0%, #445649 100%);
+            color: #f8f1e8;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            box-shadow: 0 14px 34px rgba(47, 63, 53, 0.20);
+            min-height: 3rem;
+        }
+
+        .stDownloadButton > button {
+            background: linear-gradient(135deg, #8c5e3c 0%, #6d462b 100%);
+            box-shadow: 0 14px 34px rgba(109, 70, 43, 0.18);
+        }
+
+        .stButton > button:hover,
+        .stDownloadButton > button:hover,
+        div[data-testid="stFormSubmitButton"] button:hover {
+            border-color: rgba(96, 61, 36, 0.22);
+        }
+
+        [data-testid="stMarkdownContainer"] p {
+            line-height: 1.8;
+        }
+
+        .hero-shell {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.18)),
+                linear-gradient(180deg, rgba(255,250,243,0.95), rgba(244,236,224,0.85));
+            border: 1px solid var(--line);
+            border-radius: 32px;
+            padding: 2rem 2rem 1.6rem 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-shell::after {
+            content: "";
+            position: absolute;
+            inset: auto -40px -40px auto;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(140, 94, 60, 0.10), transparent 65%);
+        }
+
+        .eyebrow {
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.76rem;
+            color: var(--accent);
+            margin-bottom: 0.8rem;
+        }
+
+        .hero-title {
+            font-size: clamp(2.4rem, 4.8vw, 4.6rem);
+            line-height: 0.95;
+            margin: 0;
+            color: #182028;
+            font-weight: 700;
+        }
+
+        .hero-subtitle {
+            margin-top: 1rem;
+            max-width: 48rem;
+            font-size: 1.08rem;
+            color: var(--muted);
+            line-height: 1.85;
+        }
+
+        .note-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.85rem;
+            margin-top: 1.3rem;
+        }
+
+        .note-chip {
+            background: rgba(255, 250, 243, 0.72);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 0.95rem 1rem;
+        }
+
+        .note-chip strong {
+            display: block;
+            margin-bottom: 0.2rem;
+            color: var(--accent-deep);
+        }
+
+        .section-card {
+            background: rgba(255, 251, 245, 0.74);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            padding: 1.3rem 1.35rem 1.1rem 1.35rem;
+            box-shadow: var(--shadow);
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-label {
+            font-size: 0.78rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 0.35rem;
+        }
+
+        .section-title {
+            font-size: 1.45rem;
+            margin: 0;
+            color: #1d2830;
+        }
+
+        @media (max-width: 900px) {
+            .note-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-shell {
+                padding: 1.4rem 1.2rem 1.2rem 1.2rem;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_header() -> None:
+    st.markdown(
+        """
+        <section class="hero-shell">
+            <div class="eyebrow">Course Notes Atelier</div>
+            <h1 class="hero-title">课程总结生成器</h1>
+            <p class="hero-subtitle">
+                把零散的课件与讲课字幕，整理成一份更像课堂讲义的复习笔记。
+                你可以只上传一份材料，也可以把 PDF 与 TXT 一起交给系统，生成更完整的知识脉络与练习题。
+            </p>
+            <div class="note-grid">
+                <div class="note-chip">
+                    <strong>Lecture Notes</strong>
+                    中文讲义式总结，强调结构、案例与术语。
+                </div>
+                <div class="note-chip">
+                    <strong>English Quiz</strong>
+                    可选生成英文单选题，适合课后自测。
+                </div>
+                <div class="note-chip">
+                    <strong>Quiet Reading</strong>
+                    更柔和的页面排版，适合长时间阅读与导出。
+                </div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def init_state() -> None:
     defaults = {
         "summary_markdown": "",
@@ -52,7 +286,15 @@ def render_quiz_section() -> None:
     if not st.session_state.quiz_markdown:
         return
 
-    st.subheader("English Quiz")
+    st.markdown(
+        """
+        <section class="section-card">
+            <div class="section-label">Practice</div>
+            <h2 class="section-title">English Quiz</h2>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if not st.session_state.quiz_items:
         st.warning("Quiz 已生成，但暂时无法解析成交互式题目。")
@@ -150,10 +392,9 @@ def render_sidebar() -> None:
 
 def main() -> None:
     init_state()
+    render_theme()
     render_sidebar()
-
-    st.title("课程总结生成器")
-    st.caption("基于课件与讲课字幕，生成结构化中文讲义式总结")
+    render_header()
 
     top_col1, top_col2 = st.columns([3, 1])
     with top_col2:
@@ -213,7 +454,15 @@ def main() -> None:
         st.success("总结生成完成。")
 
     if st.session_state.summary_markdown:
-        st.subheader("课程总结")
+        st.markdown(
+            """
+            <section class="section-card">
+                <div class="section-label">Summary</div>
+                <h2 class="section-title">课程总结</h2>
+            </section>
+            """,
+            unsafe_allow_html=True,
+        )
         st.markdown(st.session_state.summary_markdown)
 
         pdf_bytes = build_summary_pdf(
