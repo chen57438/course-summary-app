@@ -9,7 +9,7 @@ import streamlit as st
 from src.prompts import build_summary_prompt
 
 
-DEFAULT_MODEL = "gemini-1.5-flash"
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 
 def _get_api_key() -> str:
@@ -47,7 +47,8 @@ def summarize_course_material(pdf_text: str, transcript_text: str, course_name: 
 
     _configure_client()
 
-    model = genai.GenerativeModel(DEFAULT_MODEL)
+    model_name = os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    model = genai.GenerativeModel(model_name)
     prompt = build_summary_prompt(
         pdf_text=pdf_text,
         transcript_text=transcript_text,
