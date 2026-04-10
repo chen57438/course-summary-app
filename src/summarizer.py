@@ -5,14 +5,15 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 import streamlit as st
-from google.api_core.exceptions import ResourceExhausted
+from google.api_core.exceptions import ResourceExhausted, RetryError, ServiceUnavailable
 
 from src.prompts import build_summary_prompt
 
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 MAX_PDF_CHARS = 18000
 MAX_TRANSCRIPT_CHARS = 18000
+REQUEST_TIMEOUT_SECONDS = 60
 
 
 def _get_api_key() -> str:
@@ -55,11 +56,18 @@ def _clip_text(text: str, limit: int) -> str:
 
 def _generate_text(model: genai.GenerativeModel, prompt: str) -> str:
     try:
-        response = model.generate_content(prompt)
+        response = model.generate_content(
+            prompt,
+            request_options={"timeout": REQUEST_TIMEOUT_SECONDS},
+        )
     except ResourceExhausted as exc:
         raise ValueError(
             "当前超过 Gemini 的速率或输入配额限制。请等待约 1 分钟后重试，"
             "或减少上传内容，或改用付费层项目。"
+        ) from exc
+    except (ServiceUnavailable, RetryError) as exc:
+        raise ValueError(
+            "当前 Gemini 服务繁忙或响应超时。请稍后重试，或改用更稳定的付费层项目。"
         ) from exc
 
     text = getattr(response, "text", "").strip()
