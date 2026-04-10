@@ -31,7 +31,7 @@ def main() -> None:
     render_sidebar()
 
     st.title("课程总结生成器")
-    st.caption("基于课件与讲课字幕，生成结构化中文总结")
+    st.caption("基于课件与讲课字幕，生成结构化中文讲义式总结")
 
     col1, col2 = st.columns(2)
 
