@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src.exporter import build_summary_pdf
-from src.parser import extract_pdf_text, read_txt_file
+from src.parser import extract_pdf_outline, extract_pdf_text, read_txt_file
 from src.summarizer import summarize_course_material
 
 
@@ -24,7 +24,7 @@ def render_sidebar() -> None:
         4. 点击生成总结
         """
     )
-    st.sidebar.info("请先在环境变量中配置 `GOOGLE_API_KEY`。")
+    st.sidebar.info("当前版本会优先分段解析字幕，再结合课件骨架生成总结。")
 
 
 def main() -> None:
@@ -51,10 +51,12 @@ def main() -> None:
         with st.spinner("正在提取内容并生成总结..."):
             try:
                 pdf_text = extract_pdf_text(pdf_file)
+                pdf_file.seek(0)
+                pdf_outline = extract_pdf_outline(pdf_file)
                 transcript_text = read_txt_file(txt_file)
 
                 summary = summarize_course_material(
-                    pdf_text=pdf_text,
+                    pdf_outline=pdf_outline,
                     transcript_text=transcript_text,
                     course_name=course_name.strip(),
                 )
@@ -97,6 +99,9 @@ def main() -> None:
 
         with st.expander("提取到的课件文本预览"):
             st.text_area("PDF 内容", pdf_text[:5000], height=240)
+
+        with st.expander("提取到的课件骨架预览"):
+            st.text_area("PDF 骨架", pdf_outline[:5000], height=220)
 
         with st.expander("提取到的字幕文本预览"):
             st.text_area("TXT 内容", transcript_text[:5000], height=240)
