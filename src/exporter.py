@@ -23,6 +23,7 @@ EMOJI_PATTERN = re.compile(
     flags=re.UNICODE,
 )
 BOLD_PATTERN = re.compile(r"\*\*(.+?)\*\*")
+LEADING_BOLD_PATTERN = re.compile(r"^\*\*(.+?)\*\*[:：]?\s*(.*)$")
 
 
 def _ensure_cjk_font() -> None:
@@ -49,30 +50,61 @@ def _build_styles() -> dict[str, ParagraphStyle]:
             "CustomHeading",
             parent=base_styles["Heading2"],
             fontName=PDF_FONT_NAME,
-            fontSize=13,
-            leading=18,
+            fontSize=14,
+            leading=20,
             textColor=colors.HexColor("#1f3a5f"),
-            spaceBefore=8,
-            spaceAfter=6,
+            spaceBefore=12,
+            spaceAfter=8,
         ),
         "body": ParagraphStyle(
             "CustomBody",
             parent=base_styles["BodyText"],
             fontName=PDF_FONT_NAME,
-            fontSize=10.5,
-            leading=16,
+            fontSize=11,
+            leading=19,
             alignment=TA_LEFT,
-            spaceAfter=5,
+            spaceAfter=7,
         ),
-        "bullet": ParagraphStyle(
-            "CustomBullet",
+        "bullet1": ParagraphStyle(
+            "CustomBullet1",
             parent=base_styles["BodyText"],
             fontName=PDF_FONT_NAME,
-            fontSize=10.5,
-            leading=16,
-            leftIndent=12,
-            firstLineIndent=-8,
-            spaceAfter=4,
+            fontSize=11,
+            leading=19,
+            leftIndent=14,
+            firstLineIndent=-10,
+            spaceAfter=7,
+        ),
+        "bullet2": ParagraphStyle(
+            "CustomBullet2",
+            parent=base_styles["BodyText"],
+            fontName=PDF_FONT_NAME,
+            fontSize=10.8,
+            leading=18,
+            leftIndent=32,
+            firstLineIndent=-10,
+            spaceAfter=6,
+        ),
+        "bullet3": ParagraphStyle(
+            "CustomBullet3",
+            parent=base_styles["BodyText"],
+            fontName=PDF_FONT_NAME,
+            fontSize=10.6,
+            leading=18,
+            leftIndent=48,
+            firstLineIndent=-10,
+            spaceAfter=5,
+        ),
+        "label": ParagraphStyle(
+            "CustomLabel",
+            parent=base_styles["BodyText"],
+            fontName=PDF_FONT_NAME,
+            fontSize=11,
+            leading=19,
+            leftIndent=14,
+            firstLineIndent=0,
+            spaceBefore=3,
+            spaceAfter=5,
         ),
     }
 
@@ -105,6 +137,32 @@ def _strip_markdown(text: str) -> str:
     cleaned = cleaned.replace("__", "")
     cleaned = cleaned.replace("`", "")
     return cleaned
+
+
+def _line_indent_level(line: str) -> int:
+    spaces = len(line) - len(line.lstrip(" "))
+    return min(spaces // 2, 2)
+
+
+def _bullet_style(styles: dict[str, ParagraphStyle], level: int) -> ParagraphStyle:
+    if level <= 0:
+        return styles["bullet1"]
+    if level == 1:
+        return styles["bullet2"]
+    return styles["bullet3"]
+
+
+def _format_bullet_text(text: str) -> str:
+    cleaned = _strip_markdown(text)
+    match = LEADING_BOLD_PATTERN.match(text.strip())
+    if not match:
+        return _escape_text(cleaned)
+
+    label = _strip_markdown(match.group(1))
+    rest = _strip_markdown(match.group(2))
+    if rest:
+        return f"<b>{_escape_text(label)}</b>：{_escape_text(rest)}"
+    return f"<b>{_escape_text(label)}</b>"
 
 
 def _looks_like_table_separator(line: str) -> bool:
@@ -201,15 +259,13 @@ def build_summary_pdf(summary_markdown: str, course_name: str) -> bytes:
             story.append(Paragraph(_escape_text(_strip_markdown(line[3:].strip())), styles["heading"]))
         elif line.startswith("# "):
             story.append(Paragraph(_escape_text(_strip_markdown(line[2:].strip())), styles["title"]))
-        elif line.startswith("- ") or line.startswith("* "):
-            bullet_text = _strip_markdown(line[2:].strip())
-            story.append(Paragraph(_escape_text(f"- {bullet_text}"), styles["bullet"]))
-        elif line.startswith("  * "):
-            bullet_text = _strip_markdown(line[4:].strip())
-            story.append(Paragraph(_escape_text(f"  - {bullet_text}"), styles["bullet"]))
-        elif line.startswith("  - "):
-            bullet_text = _strip_markdown(line[4:].strip())
-            story.append(Paragraph(_escape_text(f"  - {bullet_text}"), styles["bullet"]))
+        elif raw_line.lstrip().startswith("- ") or raw_line.lstrip().startswith("* "):
+            level = _line_indent_level(raw_line)
+            trimmed = raw_line.lstrip()
+            bullet_text = _format_bullet_text(trimmed[2:].strip())
+            story.append(Paragraph(f"• {bullet_text}", _bullet_style(styles, level)))
+        elif line.endswith("：") or line.endswith(":"):
+            story.append(Paragraph(f"<b>{_escape_text(_strip_markdown(line[:-1]))}</b>：", styles["label"]))
         else:
             story.append(Paragraph(_escape_text(_strip_markdown(line)), styles["body"]))
 
