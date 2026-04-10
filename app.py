@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src.exporter import build_summary_pdf
-from src.parser import extract_pdf_outline, extract_pdf_text, read_txt_file
+from src.parser import extract_pdf_text, read_txt_file
 from src.summarizer import summarize_course_material
 
 
@@ -24,7 +24,7 @@ def render_sidebar() -> None:
         4. 点击生成总结
         """
     )
-    st.sidebar.info("当前版本会优先分段解析字幕，再结合课件骨架生成总结。")
+    st.sidebar.info("当前版本会一次性融合课件与字幕生成总结。")
 
 
 def main() -> None:
@@ -48,46 +48,24 @@ def main() -> None:
             st.error("请同时上传 PDF 课件和 TXT 字幕。")
             return
 
-        status_box = st.empty()
-        progress_bar = st.progress(0)
-
-        def update_progress(current: int, total: int) -> None:
-            base = 20
-            span = 55
-            value = min(base + int((current / max(total, 1)) * span), 90)
-            progress_bar.progress(value)
-            status_box.info(f"正在分析字幕内容：第 {current} / {total} 段")
-
         with st.spinner("正在提取内容并生成总结..."):
             try:
-                status_box.info("正在提取 PDF 课件与 TXT 字幕内容")
-                progress_bar.progress(10)
                 pdf_text = extract_pdf_text(pdf_file)
-                pdf_file.seek(0)
-                pdf_outline = extract_pdf_outline(pdf_file)
                 transcript_text = read_txt_file(txt_file)
 
-                status_box.info("正在基于字幕生成分段笔记")
                 summary = summarize_course_material(
-                    pdf_outline=pdf_outline,
+                    pdf_text=pdf_text,
                     transcript_text=transcript_text,
                     course_name=course_name.strip(),
-                    progress_callback=update_progress,
                 )
             except ValueError as exc:
-                progress_bar.empty()
-                status_box.empty()
                 st.error(str(exc))
                 return
             except Exception as exc:  # noqa: BLE001
-                progress_bar.empty()
-                status_box.empty()
                 st.error("生成总结时发生未预期错误，请稍后重试。")
                 st.exception(exc)
                 return
 
-        progress_bar.progress(100)
-        status_box.success("总结生成完成。")
         st.success("总结生成完成。")
 
         st.subheader("课程总结")
@@ -119,9 +97,6 @@ def main() -> None:
 
         with st.expander("提取到的课件文本预览"):
             st.text_area("PDF 内容", pdf_text[:5000], height=240)
-
-        with st.expander("提取到的课件骨架预览"):
-            st.text_area("PDF 骨架", pdf_outline[:5000], height=220)
 
         with st.expander("提取到的字幕文本预览"):
             st.text_area("TXT 内容", transcript_text[:5000], height=240)

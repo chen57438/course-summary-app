@@ -1,22 +1,18 @@
 from __future__ import annotations
 
 import os
-from typing import Callable
 
 from dotenv import load_dotenv
 import google.generativeai as genai
 import streamlit as st
 from google.api_core.exceptions import ResourceExhausted
 
-from src.chunking import chunk_text, normalize_text
-from src.prompts import build_final_summary_prompt, build_transcript_chunk_prompt
+from src.prompts import build_summary_prompt
 
 
 DEFAULT_MODEL = "gemini-2.5-flash"
-MAX_PDF_OUTLINE_CHARS = 12000
-TRANSCRIPT_CHUNK_SIZE = 4500
-TRANSCRIPT_CHUNK_OVERLAP = 200
-MAX_TRANSCRIPT_CHUNKS = 3
+MAX_PDF_CHARS = 18000
+MAX_TRANSCRIPT_CHARS = 18000
 
 
 def _get_api_key() -> str:
@@ -50,6 +46,13 @@ def _get_model() -> genai.GenerativeModel:
     return genai.GenerativeModel(model_name)
 
 
+def _clip_text(text: str, limit: int) -> str:
+    normalized = " ".join(text.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[:limit] + "\n\n[内容过长，已截断以适配配额限制。]"
+
+
 def _generate_text(model: genai.GenerativeModel, prompt: str) -> str:
     try:
         response = model.generate_content(prompt)
@@ -65,46 +68,12 @@ def _generate_text(model: genai.GenerativeModel, prompt: str) -> str:
     return text
 
 
-def _summarize_transcript_chunks(
-    transcript_text: str,
-    model: genai.GenerativeModel,
-    course_name: str = "",
-    progress_callback: Callable[[int, int], None] | None = None,
-) -> str:
-    chunks = chunk_text(
-        transcript_text,
-        max_chars=TRANSCRIPT_CHUNK_SIZE,
-        overlap_chars=TRANSCRIPT_CHUNK_OVERLAP,
-    )[:MAX_TRANSCRIPT_CHUNKS]
-
-    if not chunks:
-        raise ValueError("字幕内容为空，无法进行分段总结。")
-
-    partial_notes: list[str] = []
-    total_chunks = len(chunks)
-
-    for index, chunk in enumerate(chunks, start=1):
-        if progress_callback:
-            progress_callback(index, total_chunks)
-        prompt = build_transcript_chunk_prompt(
-            transcript_chunk=chunk,
-            chunk_index=index,
-            total_chunks=total_chunks,
-            course_name=course_name,
-        )
-        partial_text = _generate_text(model, prompt)
-        partial_notes.append(f"### 字幕片段 {index}\n{partial_text}")
-
-    return "\n\n".join(partial_notes)
-
-
 def summarize_course_material(
-    pdf_outline: str,
+    pdf_text: str,
     transcript_text: str,
     course_name: str = "",
-    progress_callback: Callable[[int, int], None] | None = None,
 ) -> str:
-    if not pdf_outline.strip():
+    if not pdf_text.strip():
         raise ValueError("PDF 提取结果为空，无法生成总结。")
 
     if not transcript_text.strip():
@@ -112,19 +81,12 @@ def summarize_course_material(
 
     _configure_client()
     model = _get_model()
-
-    transcript_notes = _summarize_transcript_chunks(
-        transcript_text=transcript_text,
-        model=model,
-        course_name=course_name,
-        progress_callback=progress_callback,
-    )
-
-    clipped_pdf_outline = normalize_text(pdf_outline)[:MAX_PDF_OUTLINE_CHARS]
-    final_prompt = build_final_summary_prompt(
-        pdf_outline=clipped_pdf_outline,
-        transcript_notes=transcript_notes,
+    clipped_pdf_text = _clip_text(pdf_text, MAX_PDF_CHARS)
+    clipped_transcript_text = _clip_text(transcript_text, MAX_TRANSCRIPT_CHARS)
+    prompt = build_summary_prompt(
+        pdf_text=clipped_pdf_text,
+        transcript_text=clipped_transcript_text,
         course_name=course_name,
     )
 
-    return _generate_text(model, final_prompt)
+    return _generate_text(model, prompt)
