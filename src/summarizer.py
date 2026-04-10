@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import Callable
 
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -13,9 +14,9 @@ from src.prompts import build_final_summary_prompt, build_transcript_chunk_promp
 
 DEFAULT_MODEL = "gemini-2.5-flash"
 MAX_PDF_OUTLINE_CHARS = 12000
-TRANSCRIPT_CHUNK_SIZE = 5500
-TRANSCRIPT_CHUNK_OVERLAP = 300
-MAX_TRANSCRIPT_CHUNKS = 8
+TRANSCRIPT_CHUNK_SIZE = 4500
+TRANSCRIPT_CHUNK_OVERLAP = 200
+MAX_TRANSCRIPT_CHUNKS = 3
 
 
 def _get_api_key() -> str:
@@ -68,6 +69,7 @@ def _summarize_transcript_chunks(
     transcript_text: str,
     model: genai.GenerativeModel,
     course_name: str = "",
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> str:
     chunks = chunk_text(
         transcript_text,
@@ -82,6 +84,8 @@ def _summarize_transcript_chunks(
     total_chunks = len(chunks)
 
     for index, chunk in enumerate(chunks, start=1):
+        if progress_callback:
+            progress_callback(index, total_chunks)
         prompt = build_transcript_chunk_prompt(
             transcript_chunk=chunk,
             chunk_index=index,
@@ -94,7 +98,12 @@ def _summarize_transcript_chunks(
     return "\n\n".join(partial_notes)
 
 
-def summarize_course_material(pdf_outline: str, transcript_text: str, course_name: str = "") -> str:
+def summarize_course_material(
+    pdf_outline: str,
+    transcript_text: str,
+    course_name: str = "",
+    progress_callback: Callable[[int, int], None] | None = None,
+) -> str:
     if not pdf_outline.strip():
         raise ValueError("PDF 提取结果为空，无法生成总结。")
 
@@ -108,6 +117,7 @@ def summarize_course_material(pdf_outline: str, transcript_text: str, course_nam
         transcript_text=transcript_text,
         model=model,
         course_name=course_name,
+        progress_callback=progress_callback,
     )
 
     clipped_pdf_outline = normalize_text(pdf_outline)[:MAX_PDF_OUTLINE_CHARS]
