@@ -20,28 +20,31 @@ def render_theme() -> None:
         """
         <style>
         :root {
-            --paper: #f7f1e8;
-            --paper-deep: #efe4d3;
-            --ink: #1f2430;
-            --muted: #6d675f;
-            --accent: #8c5e3c;
-            --accent-deep: #603d24;
-            --line: rgba(96, 61, 36, 0.18);
-            --card: rgba(255, 251, 245, 0.78);
-            --shadow: 0 20px 60px rgba(72, 48, 30, 0.10);
+            --paper: #f8efe3;
+            --paper-deep: #ecd8c2;
+            --ink: #18161a;
+            --muted: #665d56;
+            --accent: #a14f2a;
+            --accent-deep: #5f2f1e;
+            --forest: #27453f;
+            --wine: #6c2f3d;
+            --line: rgba(95, 47, 30, 0.16);
+            --card: rgba(255, 249, 242, 0.72);
+            --shadow: 0 22px 70px rgba(69, 37, 24, 0.14);
         }
 
         .stApp {
             background:
-                radial-gradient(circle at top left, rgba(140, 94, 60, 0.10), transparent 30%),
-                radial-gradient(circle at top right, rgba(93, 117, 92, 0.08), transparent 28%),
-                linear-gradient(180deg, #fbf7f2 0%, var(--paper) 100%);
+                radial-gradient(circle at 12% 12%, rgba(161, 79, 42, 0.16), transparent 24%),
+                radial-gradient(circle at 86% 16%, rgba(39, 69, 63, 0.18), transparent 26%),
+                radial-gradient(circle at 78% 72%, rgba(108, 47, 61, 0.12), transparent 22%),
+                linear-gradient(180deg, #fcf5eb 0%, var(--paper) 100%);
             color: var(--ink);
         }
 
         .main .block-container {
-            max-width: 1120px;
-            padding-top: 2.3rem;
+            max-width: 1180px;
+            padding-top: 1.7rem;
             padding-bottom: 4rem;
         }
 
@@ -51,7 +54,7 @@ def render_theme() -> None:
         }
 
         [data-testid="stSidebar"] {
-            background: rgba(250, 244, 236, 0.92);
+            background: rgba(249, 241, 231, 0.92);
             border-right: 1px solid var(--line);
         }
 
@@ -64,7 +67,7 @@ def render_theme() -> None:
         div[data-testid="stExpander"] {
             background: var(--card);
             border: 1px solid var(--line);
-            border-radius: 22px;
+            border-radius: 26px;
             box-shadow: var(--shadow);
         }
 
@@ -90,17 +93,17 @@ def render_theme() -> None:
         div[data-testid="stFormSubmitButton"] button {
             border-radius: 999px;
             border: 1px solid rgba(96, 61, 36, 0.16);
-            background: linear-gradient(135deg, #2f3f35 0%, #445649 100%);
+            background: linear-gradient(135deg, var(--forest) 0%, #496159 100%);
             color: #f8f1e8;
             font-weight: 600;
             letter-spacing: 0.01em;
-            box-shadow: 0 14px 34px rgba(47, 63, 53, 0.20);
+            box-shadow: 0 16px 36px rgba(39, 69, 63, 0.22);
             min-height: 3rem;
         }
 
         .stDownloadButton > button {
-            background: linear-gradient(135deg, #8c5e3c 0%, #6d462b 100%);
-            box-shadow: 0 14px 34px rgba(109, 70, 43, 0.18);
+            background: linear-gradient(135deg, var(--accent) 0%, var(--wine) 100%);
+            box-shadow: 0 16px 36px rgba(108, 47, 61, 0.18);
         }
 
         .stButton > button:hover,
@@ -115,63 +118,76 @@ def render_theme() -> None:
 
         .hero-shell {
             background:
-                linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.18)),
-                linear-gradient(180deg, rgba(255,250,243,0.95), rgba(244,236,224,0.85));
+                linear-gradient(135deg, rgba(255,255,255,0.52), rgba(255,255,255,0.08)),
+                linear-gradient(120deg, rgba(255,250,243,0.94), rgba(240,228,214,0.88));
             border: 1px solid var(--line);
-            border-radius: 32px;
-            padding: 2rem 2rem 1.6rem 2rem;
+            border-radius: 40px;
+            padding: 2.3rem 2.2rem 1.9rem 2.2rem;
             box-shadow: var(--shadow);
             margin-bottom: 1.4rem;
             position: relative;
             overflow: hidden;
         }
 
+        .hero-shell::before {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            top: -80px;
+            right: 90px;
+            border-radius: 32px;
+            transform: rotate(24deg);
+            background: linear-gradient(135deg, rgba(39, 69, 63, 0.18), rgba(39, 69, 63, 0.02));
+        }
+
         .hero-shell::after {
             content: "";
             position: absolute;
-            inset: auto -40px -40px auto;
-            width: 180px;
-            height: 180px;
+            inset: auto -36px -30px auto;
+            width: 220px;
+            height: 220px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(140, 94, 60, 0.10), transparent 65%);
+            background: radial-gradient(circle, rgba(161, 79, 42, 0.14), transparent 65%);
         }
 
         .eyebrow {
             text-transform: uppercase;
-            letter-spacing: 0.16em;
-            font-size: 0.76rem;
-            color: var(--accent);
+            letter-spacing: 0.24em;
+            font-size: 0.72rem;
+            color: var(--wine);
             margin-bottom: 0.8rem;
         }
 
         .hero-title {
-            font-size: clamp(2.4rem, 4.8vw, 4.6rem);
-            line-height: 0.95;
+            font-size: clamp(3rem, 7vw, 6.3rem);
+            line-height: 0.88;
             margin: 0;
-            color: #182028;
-            font-weight: 700;
+            color: #16151a;
+            font-weight: 800;
+            max-width: 8ch;
         }
 
         .hero-subtitle {
             margin-top: 1rem;
-            max-width: 48rem;
-            font-size: 1.08rem;
+            max-width: 42rem;
+            font-size: 1.05rem;
             color: var(--muted);
-            line-height: 1.85;
+            line-height: 1.9;
         }
 
         .note-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 0.85rem;
-            margin-top: 1.3rem;
+            margin-top: 1.45rem;
         }
 
         .note-chip {
-            background: rgba(255, 250, 243, 0.72);
+            background: linear-gradient(180deg, rgba(255,250,244,0.78), rgba(250,241,230,0.62));
             border: 1px solid var(--line);
-            border-radius: 18px;
-            padding: 0.95rem 1rem;
+            border-radius: 20px;
+            padding: 1rem 1rem 0.95rem 1rem;
         }
 
         .note-chip strong {
@@ -181,13 +197,26 @@ def render_theme() -> None:
         }
 
         .section-card {
-            background: rgba(255, 251, 245, 0.74);
+            background: linear-gradient(135deg, rgba(255,252,247,0.82), rgba(248,238,226,0.68));
             border: 1px solid var(--line);
-            border-radius: 28px;
-            padding: 1.3rem 1.35rem 1.1rem 1.35rem;
+            border-radius: 30px;
+            padding: 1.4rem 1.45rem 1.15rem 1.45rem;
             box-shadow: var(--shadow);
             margin-top: 1rem;
             margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section-card::after {
+            content: "";
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            right: -40px;
+            top: -40px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(161, 79, 42, 0.10), transparent 70%);
         }
 
         .section-label {
@@ -206,9 +235,9 @@ def render_theme() -> None:
 
         .composer-shell {
             display: grid;
-            grid-template-columns: 1.2fr 0.8fr;
+            grid-template-columns: 1.35fr 0.65fr;
             gap: 1rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
 
         .composer-panel,
@@ -221,11 +250,25 @@ def render_theme() -> None:
         }
 
         .composer-panel {
-            padding: 1.2rem 1.2rem 0.9rem 1.2rem;
+            padding: 1.35rem 1.3rem 1rem 1.3rem;
+            position: relative;
+            overflow: hidden;
         }
 
         .side-note-panel {
             padding: 1.2rem;
+            transform: translateY(26px);
+            background: linear-gradient(180deg, rgba(255,249,242,0.82), rgba(243,230,218,0.78));
+        }
+
+        .composer-panel::after {
+            content: "NOTES";
+            position: absolute;
+            right: 18px;
+            top: 14px;
+            font-size: 0.74rem;
+            letter-spacing: 0.28em;
+            color: rgba(95, 47, 30, 0.22);
         }
 
         .panel-kicker {
@@ -237,9 +280,10 @@ def render_theme() -> None:
         }
 
         .panel-title {
-            font-size: 1.35rem;
+            font-size: 1.6rem;
             margin: 0 0 0.35rem 0;
             color: #1c262d;
+            line-height: 1.15;
         }
 
         .panel-copy {
@@ -257,13 +301,20 @@ def render_theme() -> None:
         }
 
         .result-frame {
-            padding: 1rem 1.2rem 1.1rem 1.2rem;
+            padding: 1.15rem 1.35rem 1.2rem 1.35rem;
             margin-top: 1rem;
+            background:
+                linear-gradient(180deg, rgba(255,252,248,0.82), rgba(250,242,232,0.74));
         }
 
         .result-frame h3 {
             margin-top: 0.1rem;
             margin-bottom: 0.4rem;
+        }
+
+        .result-frame p, .result-frame li {
+            font-size: 1.02rem;
+            line-height: 1.95;
         }
 
         @media (max-width: 900px) {
@@ -277,6 +328,10 @@ def render_theme() -> None:
 
             .composer-shell {
                 grid-template-columns: 1fr;
+            }
+
+            .side-note-panel {
+                transform: none;
             }
         }
         </style>
@@ -321,7 +376,7 @@ def render_composer_intro() -> None:
         <section class="composer-shell">
             <div class="composer-panel">
                 <div class="panel-kicker">Input Studio</div>
-                <h2 class="panel-title">把材料交给这一页，然后慢慢长成讲义</h2>
+                <h2 class="panel-title">把材料交给这一页，让它慢慢长成一份可以阅读的讲义</h2>
                 <p class="panel-copy">
                     你可以上传 PDF、TXT，或者两者一起。系统会优先整理知识结构、教授强调与可复习的术语框架，
                     同时也兼容纯中文文档，不会为了格式感而硬塞不自然的英文表达。
