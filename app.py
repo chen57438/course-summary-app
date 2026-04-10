@@ -20,13 +20,13 @@ def render_theme() -> None:
         """
         <style>
         :root {
-            --bg: #f6f1ea;
+            --bg: #fff6ee;
             --ink: #12131a;
             --muted: #615b57;
-            --navy: #1b2a52;
-            --copper: #b85c38;
-            --sage: #5d7a6f;
-            --sand: #efe1cf;
+            --navy: #2850c8;
+            --copper: #ff7a45;
+            --sage: #2fa67f;
+            --sand: #ffe4c8;
             --line: rgba(18, 19, 26, 0.09);
             --card: rgba(255, 251, 246, 0.82);
             --shadow: 0 22px 52px rgba(35, 25, 20, 0.10);
@@ -35,9 +35,10 @@ def render_theme() -> None:
 
         .stApp {
             background:
-                radial-gradient(circle at 10% 10%, rgba(184, 92, 56, 0.18), transparent 22%),
-                radial-gradient(circle at 82% 16%, rgba(27, 42, 82, 0.16), transparent 26%),
-                linear-gradient(180deg, #fcf8f4 0%, var(--bg) 100%);
+                radial-gradient(circle at 8% 10%, rgba(255, 122, 69, 0.22), transparent 22%),
+                radial-gradient(circle at 82% 14%, rgba(40, 80, 200, 0.18), transparent 26%),
+                radial-gradient(circle at 78% 70%, rgba(47, 166, 127, 0.16), transparent 22%),
+                linear-gradient(180deg, #fffaf5 0%, var(--bg) 100%);
             color: var(--ink);
         }
 
@@ -92,16 +93,16 @@ def render_theme() -> None:
         div[data-testid="stFormSubmitButton"] button {
             border-radius: 18px;
             border: 1px solid rgba(27, 42, 82, 0.10);
-            background: linear-gradient(135deg, var(--navy) 0%, #31467a 100%);
+            background: linear-gradient(135deg, var(--navy) 0%, #4f7bff 100%);
             color: #ffffff;
             font-weight: 600;
             letter-spacing: 0.01em;
-            box-shadow: 0 16px 34px rgba(27, 42, 82, 0.18);
+            box-shadow: 0 16px 34px rgba(40, 80, 200, 0.20);
             min-height: 3.2rem;
         }
 
         .stDownloadButton > button {
-            background: linear-gradient(135deg, #ffffff 0%, #fbf3eb 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #fff2e5 100%);
             color: var(--ink);
             border: 1px solid rgba(18, 19, 26, 0.10);
             box-shadow: var(--shadow-soft);
@@ -119,7 +120,7 @@ def render_theme() -> None:
 
         .hero-shell {
             background:
-                linear-gradient(135deg, rgba(24,26,34,0.98), rgba(29,43,78,0.94));
+                linear-gradient(135deg, rgba(39,47,97,0.96), rgba(40,80,200,0.92));
             border: 1px solid var(--line);
             border-radius: 38px;
             padding: 2.4rem 2.3rem 2.1rem 2.3rem;
@@ -138,7 +139,7 @@ def render_theme() -> None:
             right: -60px;
             border-radius: 32px;
             transform: rotate(24deg);
-            background: linear-gradient(180deg, rgba(184, 92, 56, 0.20), rgba(184, 92, 56, 0.02));
+            background: linear-gradient(180deg, rgba(255, 122, 69, 0.28), rgba(255, 122, 69, 0.03));
         }
 
         .hero-shell::after {
@@ -148,7 +149,7 @@ def render_theme() -> None:
             width: 260px;
             height: 260px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(93, 122, 111, 0.18), transparent 68%);
+            background: radial-gradient(circle, rgba(47, 166, 127, 0.22), transparent 68%);
         }
 
         .eyebrow {
@@ -215,7 +216,7 @@ def render_theme() -> None:
             position: absolute;
             inset: 0 auto 0 0;
             width: 8px;
-            background: linear-gradient(180deg, var(--copper), var(--navy));
+            background: linear-gradient(180deg, var(--copper), var(--sage), var(--navy));
         }
 
         .section-label {
@@ -239,9 +240,19 @@ def render_theme() -> None:
             margin-bottom: 1.3rem;
         }
 
+        .workbench-shell {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 1rem;
+            align-items: start;
+            margin-bottom: 1.4rem;
+        }
+
         .composer-panel,
         .side-note-panel,
-        .result-frame {
+        .result-frame,
+        .input-stage,
+        .tower-panel {
             background: linear-gradient(180deg, rgba(255,255,255,0.90), rgba(248,242,235,0.80));
             border: 1px solid var(--line);
             border-radius: 26px;
@@ -305,6 +316,56 @@ def render_theme() -> None:
             color: #ffffff;
         }
 
+        .input-stage {
+            padding: 1.25rem;
+        }
+
+        .tower-panel {
+            padding: 1.2rem;
+            background: linear-gradient(180deg, rgba(26,36,76,0.98), rgba(33,54,111,0.94));
+            color: rgba(255,255,255,0.88);
+            position: sticky;
+            top: 1.2rem;
+        }
+
+        .tower-panel .panel-kicker,
+        .tower-panel .panel-title {
+            color: #ffffff;
+        }
+
+        .tower-copy {
+            color: rgba(255,255,255,0.74);
+            line-height: 1.75;
+            font-size: 0.96rem;
+            margin: 0.4rem 0 1rem 0;
+        }
+
+        .tower-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .tower-stat {
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 18px;
+            padding: 0.85rem 0.9rem;
+        }
+
+        .tower-stat strong {
+            display: block;
+            color: #ffffff;
+            margin-bottom: 0.2rem;
+        }
+
+        .tower-stat span {
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.68);
+        }
+
         .result-frame {
             padding: 1.15rem 1.35rem 1.2rem 1.35rem;
             margin-top: 1rem;
@@ -334,8 +395,16 @@ def render_theme() -> None:
                 grid-template-columns: 1fr;
             }
 
+            .workbench-shell {
+                grid-template-columns: 1fr;
+            }
+
             .side-note-panel {
                 transform: none;
+            }
+
+            .tower-panel {
+                position: static;
             }
         }
         </style>
@@ -395,6 +464,32 @@ def render_composer_intro() -> None:
                     <li>Summary + Quiz 一体化复习输出</li>
                 </ul>
             </aside>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_control_tower() -> None:
+    st.markdown(
+        """
+        <section class="tower-panel">
+            <div class="panel-kicker">Control Tower</div>
+            <h2 class="panel-title">把操作区从表单里解放出来</h2>
+            <p class="tower-copy">
+                这一栏专门负责生成、重置与状态感知。输入材料留在左侧，操作决策放到右侧，
+                页面因此会更像一套有个性的内容工作台，而不是顺序填表。
+            </p>
+            <div class="tower-stats">
+                <div class="tower-stat">
+                    <strong>Input</strong>
+                    <span>PDF / TXT / Mixed</span>
+                </div>
+                <div class="tower-stat">
+                    <strong>Output</strong>
+                    <span>Notes / Quiz / PDF</span>
+                </div>
+            </div>
         </section>
         """,
         unsafe_allow_html=True,
@@ -549,24 +644,32 @@ def main() -> None:
     render_header()
     render_composer_intro()
 
-    top_col1, top_col2 = st.columns([3, 1])
-    with top_col2:
+    left_rail, right_rail = st.columns([1.18, 0.82], gap="large")
+
+    with left_rail:
+        st.markdown('<section class="input-stage">', unsafe_allow_html=True)
+        upload_col1, upload_col2 = st.columns(2)
+
+        with upload_col1:
+            pdf_file = st.file_uploader("上传 PDF 课件", type=["pdf"])
+
+        with upload_col2:
+            txt_file = st.file_uploader("上传 TXT 字幕", type=["txt"])
+
+        course_name = st.text_input("课程名称 / 本次主题（可选）", placeholder="例如：Project Management - Stakeholder Analysis")
+        st.markdown("</section>", unsafe_allow_html=True)
+
+    with right_rail:
+        render_control_tower()
+        generate_quiz = st.checkbox("同时生成英文单选题 Quiz", value=False)
+        if st.button("生成课程总结", type="primary", use_container_width=True):
+            st.session_state["_trigger_generate"] = True
         if st.button("重置页面", use_container_width=True):
             reset_state()
             st.rerun()
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        pdf_file = st.file_uploader("上传 PDF 课件", type=["pdf"])
-
-    with col2:
-        txt_file = st.file_uploader("上传 TXT 字幕", type=["txt"])
-
-    course_name = st.text_input("课程名称 / 本次主题（可选）", placeholder="例如：Project Management - Stakeholder Analysis")
-    generate_quiz = st.checkbox("同时生成英文单选题 Quiz", value=False)
-
-    if st.button("生成课程总结", type="primary", use_container_width=True):
+    if st.session_state.get("_trigger_generate"):
+        st.session_state["_trigger_generate"] = False
         if not pdf_file and not txt_file:
             st.error("请至少上传一个 PDF 课件或 TXT 字幕文件。")
             return
