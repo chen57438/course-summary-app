@@ -20,31 +20,29 @@ def render_theme() -> None:
         """
         <style>
         :root {
-            --paper: #f8efe3;
-            --paper-deep: #ecd8c2;
-            --ink: #18161a;
-            --muted: #665d56;
-            --accent: #a14f2a;
-            --accent-deep: #5f2f1e;
-            --forest: #27453f;
-            --wine: #6c2f3d;
-            --line: rgba(95, 47, 30, 0.16);
-            --card: rgba(255, 249, 242, 0.72);
-            --shadow: 0 22px 70px rgba(69, 37, 24, 0.14);
+            --bg: #f4f7fb;
+            --bg-deep: #e9eff7;
+            --ink: #101828;
+            --muted: #5f6b7a;
+            --accent: #1459c7;
+            --accent-deep: #0f3f8f;
+            --success: #0f766e;
+            --line: rgba(16, 24, 40, 0.08);
+            --card: rgba(255, 255, 255, 0.88);
+            --shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+            --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.05);
         }
 
         .stApp {
             background:
-                radial-gradient(circle at 12% 12%, rgba(161, 79, 42, 0.16), transparent 24%),
-                radial-gradient(circle at 86% 16%, rgba(39, 69, 63, 0.18), transparent 26%),
-                radial-gradient(circle at 78% 72%, rgba(108, 47, 61, 0.12), transparent 22%),
-                linear-gradient(180deg, #fcf5eb 0%, var(--paper) 100%);
+                radial-gradient(circle at top left, rgba(20, 89, 199, 0.10), transparent 26%),
+                linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
             color: var(--ink);
         }
 
         .main .block-container {
             max-width: 1180px;
-            padding-top: 1.7rem;
+            padding-top: 1.4rem;
             padding-bottom: 4rem;
         }
 
@@ -54,7 +52,7 @@ def render_theme() -> None:
         }
 
         [data-testid="stSidebar"] {
-            background: rgba(249, 241, 231, 0.92);
+            background: rgba(248, 250, 252, 0.94);
             border-right: 1px solid var(--line);
         }
 
@@ -67,8 +65,8 @@ def render_theme() -> None:
         div[data-testid="stExpander"] {
             background: var(--card);
             border: 1px solid var(--line);
-            border-radius: 26px;
-            box-shadow: var(--shadow);
+            border-radius: 20px;
+            box-shadow: var(--shadow-soft);
         }
 
         div[data-testid="stFileUploader"] > section {
@@ -84,32 +82,34 @@ def render_theme() -> None:
         div[data-testid="stTextInput"] label,
         div[data-testid="stFileUploader"] label,
         div[data-testid="stCheckbox"] label {
-            color: var(--accent-deep) !important;
+            color: #344054 !important;
             font-weight: 600;
         }
 
         .stButton > button,
         .stDownloadButton > button,
         div[data-testid="stFormSubmitButton"] button {
-            border-radius: 999px;
-            border: 1px solid rgba(96, 61, 36, 0.16);
-            background: linear-gradient(135deg, var(--forest) 0%, #496159 100%);
-            color: #f8f1e8;
+            border-radius: 14px;
+            border: 1px solid rgba(20, 89, 199, 0.10);
+            background: linear-gradient(180deg, #1663d6 0%, var(--accent) 100%);
+            color: #ffffff;
             font-weight: 600;
             letter-spacing: 0.01em;
-            box-shadow: 0 16px 36px rgba(39, 69, 63, 0.22);
+            box-shadow: 0 12px 28px rgba(20, 89, 199, 0.18);
             min-height: 3rem;
         }
 
         .stDownloadButton > button {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--wine) 100%);
-            box-shadow: 0 16px 36px rgba(108, 47, 61, 0.18);
+            background: #ffffff;
+            color: var(--ink);
+            border: 1px solid rgba(16, 24, 40, 0.10);
+            box-shadow: var(--shadow-soft);
         }
 
         .stButton > button:hover,
         .stDownloadButton > button:hover,
         div[data-testid="stFormSubmitButton"] button:hover {
-            border-color: rgba(96, 61, 36, 0.22);
+            border-color: rgba(20, 89, 199, 0.22);
         }
 
         [data-testid="stMarkdownContainer"] p {
@@ -118,11 +118,10 @@ def render_theme() -> None:
 
         .hero-shell {
             background:
-                linear-gradient(135deg, rgba(255,255,255,0.52), rgba(255,255,255,0.08)),
-                linear-gradient(120deg, rgba(255,250,243,0.94), rgba(240,228,214,0.88));
+                linear-gradient(135deg, rgba(16,24,40,0.96), rgba(19,67,149,0.92));
             border: 1px solid var(--line);
-            border-radius: 40px;
-            padding: 2.3rem 2.2rem 1.9rem 2.2rem;
+            border-radius: 28px;
+            padding: 2.2rem 2.1rem 1.9rem 2.1rem;
             box-shadow: var(--shadow);
             margin-bottom: 1.4rem;
             position: relative;
@@ -132,48 +131,47 @@ def render_theme() -> None:
         .hero-shell::before {
             content: "";
             position: absolute;
-            width: 220px;
-            height: 220px;
-            top: -80px;
-            right: 90px;
-            border-radius: 32px;
-            transform: rotate(24deg);
-            background: linear-gradient(135deg, rgba(39, 69, 63, 0.18), rgba(39, 69, 63, 0.02));
+            width: 260px;
+            height: 260px;
+            top: -100px;
+            right: -40px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.10), transparent 68%);
         }
 
         .hero-shell::after {
             content: "";
             position: absolute;
-            inset: auto -36px -30px auto;
-            width: 220px;
-            height: 220px;
+            inset: auto auto -70px -50px;
+            width: 240px;
+            height: 240px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(161, 79, 42, 0.14), transparent 65%);
+            background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%);
         }
 
         .eyebrow {
             text-transform: uppercase;
-            letter-spacing: 0.24em;
-            font-size: 0.72rem;
-            color: var(--wine);
+            letter-spacing: 0.18em;
+            font-size: 0.74rem;
+            color: rgba(255,255,255,0.72);
             margin-bottom: 0.8rem;
         }
 
         .hero-title {
-            font-size: clamp(3rem, 7vw, 6.3rem);
-            line-height: 0.88;
+            font-size: clamp(2.8rem, 5.8vw, 4.8rem);
+            line-height: 0.92;
             margin: 0;
-            color: #16151a;
-            font-weight: 800;
-            max-width: 8ch;
+            color: #ffffff;
+            font-weight: 700;
+            max-width: 10ch;
         }
 
         .hero-subtitle {
             margin-top: 1rem;
-            max-width: 42rem;
-            font-size: 1.05rem;
-            color: var(--muted);
-            line-height: 1.9;
+            max-width: 46rem;
+            font-size: 1.02rem;
+            color: rgba(255,255,255,0.78);
+            line-height: 1.8;
         }
 
         .note-grid {
@@ -184,24 +182,26 @@ def render_theme() -> None:
         }
 
         .note-chip {
-            background: linear-gradient(180deg, rgba(255,250,244,0.78), rgba(250,241,230,0.62));
-            border: 1px solid var(--line);
-            border-radius: 20px;
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 18px;
             padding: 1rem 1rem 0.95rem 1rem;
+            color: rgba(255,255,255,0.78);
+            backdrop-filter: blur(6px);
         }
 
         .note-chip strong {
             display: block;
             margin-bottom: 0.2rem;
-            color: var(--accent-deep);
+            color: #ffffff;
         }
 
         .section-card {
-            background: linear-gradient(135deg, rgba(255,252,247,0.82), rgba(248,238,226,0.68));
+            background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(252,253,255,0.82));
             border: 1px solid var(--line);
-            border-radius: 30px;
-            padding: 1.4rem 1.45rem 1.15rem 1.45rem;
-            box-shadow: var(--shadow);
+            border-radius: 22px;
+            padding: 1.2rem 1.25rem 1rem 1.25rem;
+            box-shadow: var(--shadow-soft);
             margin-top: 1rem;
             margin-bottom: 1rem;
             position: relative;
@@ -211,17 +211,14 @@ def render_theme() -> None:
         .section-card::after {
             content: "";
             position: absolute;
-            width: 140px;
-            height: 140px;
-            right: -40px;
-            top: -40px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(161, 79, 42, 0.10), transparent 70%);
+            inset: auto 0 0 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), #4f8df0);
         }
 
         .section-label {
-            font-size: 0.78rem;
-            letter-spacing: 0.12em;
+            font-size: 0.74rem;
+            letter-spacing: 0.14em;
             text-transform: uppercase;
             color: var(--accent);
             margin-bottom: 0.35rem;
@@ -235,7 +232,7 @@ def render_theme() -> None:
 
         .composer-shell {
             display: grid;
-            grid-template-columns: 1.35fr 0.65fr;
+            grid-template-columns: 1fr 0.72fr;
             gap: 1rem;
             margin-bottom: 1.2rem;
         }
@@ -243,32 +240,32 @@ def render_theme() -> None:
         .composer-panel,
         .side-note-panel,
         .result-frame {
-            background: rgba(255, 251, 245, 0.76);
+            background: linear-gradient(180deg, rgba(255,255,255,0.90), rgba(250,252,255,0.84));
             border: 1px solid var(--line);
-            border-radius: 28px;
-            box-shadow: var(--shadow);
+            border-radius: 20px;
+            box-shadow: var(--shadow-soft);
         }
 
         .composer-panel {
-            padding: 1.35rem 1.3rem 1rem 1.3rem;
+            padding: 1.2rem 1.2rem 1rem 1.2rem;
             position: relative;
             overflow: hidden;
         }
 
         .side-note-panel {
             padding: 1.2rem;
-            transform: translateY(26px);
-            background: linear-gradient(180deg, rgba(255,249,242,0.82), rgba(243,230,218,0.78));
+            transform: none;
+            background: linear-gradient(180deg, rgba(247,250,255,0.96), rgba(240,245,252,0.92));
         }
 
         .composer-panel::after {
-            content: "NOTES";
+            content: "WORKSPACE";
             position: absolute;
             right: 18px;
             top: 14px;
             font-size: 0.74rem;
             letter-spacing: 0.28em;
-            color: rgba(95, 47, 30, 0.22);
+            color: rgba(20, 89, 199, 0.16);
         }
 
         .panel-kicker {
@@ -280,7 +277,7 @@ def render_theme() -> None:
         }
 
         .panel-title {
-            font-size: 1.6rem;
+            font-size: 1.38rem;
             margin: 0 0 0.35rem 0;
             color: #1c262d;
             line-height: 1.15;
@@ -303,8 +300,7 @@ def render_theme() -> None:
         .result-frame {
             padding: 1.15rem 1.35rem 1.2rem 1.35rem;
             margin-top: 1rem;
-            background:
-                linear-gradient(180deg, rgba(255,252,248,0.82), rgba(250,242,232,0.74));
+            background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,253,0.86));
         }
 
         .result-frame h3 {
@@ -344,24 +340,24 @@ def render_header() -> None:
     st.markdown(
         """
         <section class="hero-shell">
-            <div class="eyebrow">Course Notes Atelier</div>
+            <div class="eyebrow">Course Intelligence Workspace</div>
             <h1 class="hero-title">课程总结生成器</h1>
             <p class="hero-subtitle">
-                把零散的课件与讲课字幕，整理成一份更像课堂讲义的复习笔记。
-                你可以只上传一份材料，也可以把 PDF 与 TXT 一起交给系统，生成更完整的知识脉络与练习题。
+                将课件、字幕与课堂材料快速整理成结构化学习资产。
+                支持生成讲义式总结、英文测验与可导出的复习材料，适合课程团队、学生与培训场景直接使用。
             </p>
             <div class="note-grid">
                 <div class="note-chip">
-                    <strong>Lecture Notes</strong>
-                    中文讲义式总结，强调结构、案例与术语。
+                    <strong>Structured Notes</strong>
+                    结构化中文总结，强调知识框架、案例与重点术语。
                 </div>
                 <div class="note-chip">
-                    <strong>English Quiz</strong>
-                    可选生成英文单选题，适合课后自测。
+                    <strong>Assessment Ready</strong>
+                    可选生成英文单选题，适合课后练习与教学评估。
                 </div>
                 <div class="note-chip">
-                    <strong>Quiet Reading</strong>
-                    更柔和的页面排版，适合长时间阅读与导出。
+                    <strong>Export Workflow</strong>
+                    支持 Markdown 与 PDF 导出，方便归档、分享与打印。
                 </div>
             </div>
         </section>
@@ -376,19 +372,19 @@ def render_composer_intro() -> None:
         <section class="composer-shell">
             <div class="composer-panel">
                 <div class="panel-kicker">Input Studio</div>
-                <h2 class="panel-title">把材料交给这一页，让它慢慢长成一份可以阅读的讲义</h2>
+                <h2 class="panel-title">上传材料，生成可直接复习与分发的课程内容</h2>
                 <p class="panel-copy">
-                    你可以上传 PDF、TXT，或者两者一起。系统会优先整理知识结构、教授强调与可复习的术语框架，
-                    同时也兼容纯中文文档，不会为了格式感而硬塞不自然的英文表达。
+                    你可以上传 PDF、TXT，或者两者一起。系统会自动提炼知识结构、教授强调、术语框架与练习题，
+                    同时兼容纯中文文档、中英混合讲义和常见课程字幕。
                 </p>
             </div>
             <aside class="side-note-panel">
-                <div class="panel-kicker">Notes</div>
-                <h3 class="panel-title">这一版适合什么材料</h3>
+                <div class="panel-kicker">Capabilities</div>
+                <h3 class="panel-title">当前支持的工作流</h3>
                 <ul class="micro-list">
-                    <li>纯中文课件与字幕</li>
-                    <li>中英混合的管理课程资料</li>
-                    <li>需要同时生成 summary 与 quiz 的复习场景</li>
+                    <li>纯中文课件与字幕总结</li>
+                    <li>中英混合管理课程资料整理</li>
+                    <li>Summary + Quiz 一体化复习输出</li>
                 </ul>
             </aside>
         </section>
