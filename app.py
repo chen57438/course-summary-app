@@ -6,7 +6,11 @@ from src.exporter import build_summary_pdf
 from src.bilingual_parser import parse_bilingual_pairs
 from src.parser import extract_pdf_text, read_txt_file
 from src.quiz_parser import parse_quiz_markdown
-from src.summarizer import generate_quiz_material, summarize_course_material
+from src.summarizer import (
+    generate_quiz_material,
+    generate_reading_guide_material,
+    summarize_course_material,
+)
 
 
 st.set_page_config(
@@ -436,6 +440,7 @@ def render_composer_intro() -> None:
                     <li>纯中文课件与字幕总结</li>
                     <li>中英混合管理课程资料整理</li>
                     <li>Summary + Quiz 一体化复习输出</li>
+                    <li>英文材料精读翻译稿</li>
                 </ul>
             </aside>
         </section>
@@ -458,6 +463,7 @@ def render_action_stage() -> None:
                 <span class="action-pill">PDF / TXT / Mixed</span>
                 <span class="action-pill">Summary</span>
                 <span class="action-pill">Quiz</span>
+                <span class="action-pill">Reading Guide</span>
                 <span class="action-pill">Export</span>
             </div>
         </section>
@@ -478,6 +484,7 @@ def init_state() -> None:
         "quiz_feedback": [],
         "_trigger_generate": False,
         "bilingual_pairs": [],
+        "reading_markdown": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -496,6 +503,7 @@ def reset_state() -> None:
         "quiz_feedback",
         "_trigger_generate",
         "bilingual_pairs",
+        "reading_markdown",
     ]
     for key in keys:
         if key in st.session_state:
@@ -603,12 +611,12 @@ def render_sidebar() -> None:
     st.sidebar.markdown(
         """
         1. 上传 PDF 课件、TXT 字幕，或两者之一
-        2. 可选勾选英文 Quiz
+        2. 可选勾选英文 Quiz / 精读翻译稿
         3. 填写课程名称或主题（可选）
         4. 点击生成总结
         """
     )
-    st.sidebar.info("支持仅 PDF、仅 TXT，或 PDF + TXT 融合生成总结，也兼容纯中文文档。")
+    st.sidebar.info("支持仅 PDF、仅 TXT，或 PDF + TXT 融合生成总结，也兼容纯中文文档与英文精读翻译。")
 
 
 def main() -> None:
@@ -634,6 +642,7 @@ def main() -> None:
         render_action_stage()
         st.markdown('<div class="action-button-stack">', unsafe_allow_html=True)
         generate_quiz = st.checkbox("同时生成英文单选题 Quiz", value=False)
+        generate_reading_guide = st.checkbox("同时生成精读翻译稿", value=False)
         if st.button("生成课程总结", type="primary", use_container_width=True):
             st.session_state["_trigger_generate"] = True
         if st.button("重置页面", use_container_width=True):
@@ -666,8 +675,17 @@ def main() -> None:
                         course_name=course_name.strip(),
                     )
 
+                reading_markdown = ""
+                if generate_reading_guide:
+                    reading_markdown = generate_reading_guide_material(
+                        pdf_text=pdf_text,
+                        transcript_text=transcript_text,
+                        course_name=course_name.strip(),
+                    )
+
                 st.session_state.summary_markdown = summary
                 st.session_state.quiz_markdown = quiz_markdown
+                st.session_state.reading_markdown = reading_markdown
                 st.session_state.pdf_text_preview = pdf_text
                 st.session_state.transcript_text_preview = transcript_text
                 st.session_state.quiz_items = parse_quiz_markdown(quiz_markdown) if quiz_markdown else []
@@ -741,6 +759,27 @@ def main() -> None:
                 mime="application/pdf",
                 use_container_width=True,
             )
+
+    if st.session_state.reading_markdown:
+        st.markdown(
+            """
+            <section class="section-card">
+                <div class="section-label">Reading</div>
+                <h2 class="section-title">精读翻译稿</h2>
+            </section>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.markdown('<section class="result-frame">', unsafe_allow_html=True)
+        st.markdown(st.session_state.reading_markdown)
+        st.markdown("</section>", unsafe_allow_html=True)
+        st.download_button(
+            label="下载精读翻译 Markdown",
+            data=st.session_state.reading_markdown,
+            file_name="guided_translation.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
 
     render_quiz_section()
 

@@ -206,3 +206,73 @@ Questions should feel like that: crisp, knowledge-based, lightly situational, an
 # Execution
 Now generate the quiz.
 """.strip()
+
+
+def build_reading_prompt(pdf_text: str, transcript_text: str, course_name: str = "") -> str:
+    course_line = f"补充课程名称或主题：{course_name}\n" if course_name else ""
+    pdf_section = pdf_text if pdf_text.strip() else "未提供 PDF 课件内容。"
+    transcript_section = transcript_text if transcript_text.strip() else "未提供 TXT 字幕内容。"
+
+    return f"""
+# Role
+你是一位擅长双语课程整理的项目管理助教。你的任务不是做高度归纳，而是把课程材料整理成“适合精读的中文辅助讲义”，帮助英语不是母语的学生较完整地读完材料，同时尽量保留老师讲课中的细节。
+
+# Input Data
+1. 【课件内容 (PDF)】: {pdf_section}
+2. 【讲稿字幕 (TXT)】: {transcript_section}
+
+# Task
+请根据已提供的材料生成一份“精读翻译稿”：
+- 如果同时提供 PDF 和 TXT，请优先按原始教学顺序整合内容，保留主要细节。
+- 如果只提供其中一种材料，请基于该材料独立生成精读翻译稿。
+- 目标不是高度总结，而是帮助学生相对完整地读懂材料内容。
+
+# Constraint & Style
+1. 以中文为主，但每一条都保留对应英文，方便中英对照阅读。
+2. 尽量按原文顺序展开，不要大幅改写结构。
+3. 只做“小限度整理”：
+   - 可以合并明显重复句
+   - 可以删去口头语、停顿词、重复寒暄
+   - 可以补一个很简短的说明帮助理解
+   - 但不要把多个细节压缩成一句大而空的总结
+4. 如果内容是字幕，请尽量保留教授举的例子、定义解释、提醒、转折和因果关系。
+5. 如果内容是课件，请保留标题、要点、定义、流程、案例说明。
+6. 专业术语尽量写成“英文原文 (中文翻译)”。
+7. 如果原文本身是纯中文，则保持自然中文，不要强行补英文。
+8. 每个片段都要形成清晰的中英对照：
+   - `- CN:` 放中文整理后的内容
+   - `- EN:` 放对应英文原文或英文整理稿
+9. 内容要比普通总结更完整，读者应能用它“顺着读完整节课”。
+10. 不要输出 quiz，不要输出词汇表，不要写成宏观摘要。
+
+# Output Schema
+请严格按以下结构输出：
+
+## 📘 精读导览 (Reading Guide)
+- CN: [用 2-4 句话说明本份精读稿覆盖什么内容、适合怎么读]
+- EN: [对应英文翻译]
+
+## 🧾 精读翻译稿 (Guided Translation)
+### Part 1
+- CN: [中文整理后的第一段内容]
+- EN: [对应英文原文或英文整理稿]
+- CN: [中文整理后的第二段内容]
+- EN: [对应英文原文或英文整理稿]
+
+### Part 2
+- CN: [继续按原顺序整理]
+- EN: [对应英文]
+
+[根据材料长度继续扩展，尽量覆盖主要内容]
+
+# Additional Notes
+- 优先保证“完整理解材料”，而不是“压缩成最短结论”。
+- 如果材料很长，请优先保留有信息量的定义、解释、案例、流程和提醒。
+- 不要提及缺失材料，不要输出“我无法访问视频”等元信息。
+- 保持 Markdown 结构清晰，方便在网页中阅读。
+
+{course_line}
+
+# Execution
+现在，请开始生成精读翻译稿。
+""".strip()
