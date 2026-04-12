@@ -7,12 +7,13 @@ import google.generativeai as genai
 import streamlit as st
 from google.api_core.exceptions import ResourceExhausted, RetryError, ServiceUnavailable
 
+from src.parser import build_transcript_study_view, normalize_study_text
 from src.prompts import build_quiz_prompt, build_reading_chunk_prompt, build_summary_prompt
 
 
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
-MAX_PDF_CHARS = 18000
-MAX_TRANSCRIPT_CHARS = 18000
+MAX_PDF_CHARS = 22000
+MAX_TRANSCRIPT_CHARS = 32000
 READING_MAX_PDF_CHARS = 50000
 READING_MAX_TRANSCRIPT_CHARS = 80000
 READING_CHUNK_CHARS = 7000
@@ -170,12 +171,16 @@ def summarize_course_material(
 
     _configure_client()
     model = _get_model()
-    clipped_pdf_text = _clip_text(pdf_text, MAX_PDF_CHARS)
-    clipped_transcript_text = _clip_text(transcript_text, MAX_TRANSCRIPT_CHARS)
+    clipped_pdf_text = _clip_text(normalize_study_text(pdf_text), MAX_PDF_CHARS)
+    cleaned_transcript, transcript_topic_map = build_transcript_study_view(transcript_text)
+    transcript_input = cleaned_transcript or transcript_text
+    clipped_transcript_text = _clip_text(normalize_study_text(transcript_input), MAX_TRANSCRIPT_CHARS)
     prompt = build_summary_prompt(
         pdf_text=clipped_pdf_text,
         transcript_text=clipped_transcript_text,
         course_name=course_name,
+        transcript_study_view=cleaned_transcript,
+        transcript_topic_map=transcript_topic_map,
     )
 
     return _generate_text(model, prompt)

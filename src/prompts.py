@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 
-def build_summary_prompt(pdf_text: str, transcript_text: str, course_name: str = "") -> str:
+def build_summary_prompt(
+    pdf_text: str,
+    transcript_text: str,
+    course_name: str = "",
+    transcript_study_view: str = "",
+    transcript_topic_map: str = "",
+) -> str:
     course_line = f"补充课程名称或主题：{course_name}\n" if course_name else ""
     pdf_section = pdf_text if pdf_text.strip() else "未提供 PDF 课件内容。"
     transcript_section = transcript_text if transcript_text.strip() else "未提供 TXT 字幕内容。"
+    study_view_section = transcript_study_view if transcript_study_view.strip() else "未提供处理后的字幕精读视图。"
+    topic_map_section = transcript_topic_map if transcript_topic_map.strip() else "未提供字幕主题梳理。"
 
     return f"""
 # Role
@@ -13,6 +21,8 @@ def build_summary_prompt(pdf_text: str, transcript_text: str, course_name: str =
 # Input Data
 1. 【课件内容 (PDF)】: {pdf_section} (这是课程的骨架和视觉重点)
 2. 【讲稿字幕 (TXT)】: {transcript_section} (这是教授口述的细节、案例和解释)
+3. 【字幕精读视图】: {study_view_section} (这是去掉明显口头噪音后，保留教学内容的字幕版本)
+4. 【字幕主题梳理】: {topic_map_section} (这是根据字幕内容抽出的主题线索)
 
 # Task
 请根据已提供的材料生成总结：如果同时有课件和讲稿，就做融合总结；如果只提供其中一种材料，就基于该材料独立总结核心知识点。你的目标是让学生即便没看视频，也能掌握本节课的核心知识。
@@ -54,6 +64,13 @@ def build_summary_prompt(pdf_text: str, transcript_text: str, course_name: str =
    - 错误选项为什么错
    - 场景题中应如何判断
 17. 不要只写宏观主题，必须尽量把知识拆到可以支持单选题判断的粒度。
+18. 如果输入里同时提供了“字幕精读视图”或“字幕主题梳理”，请优先利用它们重建教学逻辑；不要被原始字幕中的寒暄、通知、重复口头语带偏。
+19. 输出风格要更像“经过编辑整理的课堂讲义”，而不是“从头到尾压缩后的摘要”。
+20. 请主动重建课程逻辑层次，例如：
+   - 课程复盘 / 本节任务
+   - 关键概念与流程
+   - 国际项目中的新增维度
+   - 教授特别强调的误区、应用与提醒
 
 # Output Schema
 请严格按以下结构输出：
