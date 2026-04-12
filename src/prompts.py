@@ -276,3 +276,61 @@ def build_reading_prompt(pdf_text: str, transcript_text: str, course_name: str =
 # Execution
 现在，请开始生成精读翻译稿。
 """.strip()
+
+
+def build_reading_chunk_prompt(
+    chunk_text: str,
+    chunk_index: int,
+    total_chunks: int,
+    course_name: str = "",
+) -> str:
+    course_line = f"补充课程名称或主题：{course_name}\n" if course_name else ""
+
+    return f"""
+# Role
+你是一位擅长双语课程整理的项目管理助教。你正在处理一份长材料中的其中一段，目标是把这一段做成适合精读的中英对照翻译稿。
+
+# Task
+当前正在处理第 {chunk_index} / {total_chunks} 段材料。请只针对这一段内容输出“轻整理、低归纳、尽量保留细节”的精读翻译结果。
+
+# Source Chunk
+{chunk_text}
+
+# Requirements
+1. 尽量保留原文顺序，不要大幅跳跃。
+2. 只做轻整理：
+   - 删除明显口头语、停顿词、寒暄
+   - 合并明显重复句
+   - 其他内容尽量保留
+3. 优先保留：
+   - 定义
+   - 举例
+   - 教授解释
+   - 因果关系
+   - 流程步骤
+   - 提醒与误区
+4. 每一条都要按中英对照输出：
+   - `- CN:` 中文整理
+   - `- EN:` 对应英文原文或英文整理
+5. 不要写宏观摘要，不要输出 quiz，不要输出术语表。
+6. 目标是让读者能顺着读完这段材料，而不是只看到结论。
+7. 尽可能多覆盖这段中的有效信息，不要只挑极少数点。
+
+# Output Format
+请严格按以下结构输出：
+
+### Part {chunk_index}
+- CN: [中文整理后的内容]
+- EN: [对应英文]
+- CN: [中文整理后的内容]
+- EN: [对应英文]
+- CN: [中文整理后的内容]
+- EN: [对应英文]
+
+[继续扩展，直到充分覆盖这一段中的主要内容]
+
+{course_line}
+
+# Execution
+现在开始输出这一段的精读翻译稿。
+""".strip()
