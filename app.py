@@ -3,6 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src.exporter import build_summary_pdf
+from src.bilingual_parser import parse_bilingual_pairs
 from src.parser import extract_pdf_text, read_txt_file
 from src.quiz_parser import parse_quiz_markdown
 from src.summarizer import generate_quiz_material, summarize_course_material
@@ -476,6 +477,7 @@ def init_state() -> None:
         "quiz_score": 0,
         "quiz_feedback": [],
         "_trigger_generate": False,
+        "bilingual_pairs": [],
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -493,6 +495,7 @@ def reset_state() -> None:
         "quiz_score",
         "quiz_feedback",
         "_trigger_generate",
+        "bilingual_pairs",
     ]
     for key in keys:
         if key in st.session_state:
@@ -668,6 +671,7 @@ def main() -> None:
                 st.session_state.pdf_text_preview = pdf_text
                 st.session_state.transcript_text_preview = transcript_text
                 st.session_state.quiz_items = parse_quiz_markdown(quiz_markdown) if quiz_markdown else []
+                st.session_state.bilingual_pairs = parse_bilingual_pairs(summary)
                 st.session_state.quiz_submitted = False
                 st.session_state.quiz_score = 0
                 st.session_state.quiz_feedback = []
@@ -691,9 +695,29 @@ def main() -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.markdown('<section class="result-frame">', unsafe_allow_html=True)
-        st.markdown(st.session_state.summary_markdown)
-        st.markdown("</section>", unsafe_allow_html=True)
+        tab1, tab2 = st.tabs(["讲义版", "中英对照版"])
+        with tab1:
+            st.markdown('<section class="result-frame">', unsafe_allow_html=True)
+            st.markdown(st.session_state.summary_markdown)
+            st.markdown("</section>", unsafe_allow_html=True)
+
+        with tab2:
+            st.info("原生 Streamlit 不支持逐句选中后自动联动高亮；这里提供按条编号的中英对照视图，方便你快速对应。")
+            if not st.session_state.bilingual_pairs:
+                st.warning("当前总结暂时无法解析为中英对照条目。")
+            else:
+                for idx, item in enumerate(st.session_state.bilingual_pairs, start=1):
+                    st.markdown(
+                        f"""
+                        <section class="result-frame">
+                            <div class="section-label">{item['section']}</div>
+                            <h3>{idx:02d}. {item['module'] or 'Bilingual Note'}</h3>
+                            <p><strong>中文</strong><br>{item['cn']}</p>
+                            <p><strong>English</strong><br>{item['en']}</p>
+                        </section>
+                        """,
+                        unsafe_allow_html=True,
+                    )
 
         pdf_bytes = build_summary_pdf(
             summary_markdown=st.session_state.summary_markdown,
