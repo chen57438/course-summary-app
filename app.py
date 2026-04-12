@@ -213,6 +213,12 @@ def render_theme() -> None:
             align-items: start;
         }
 
+        .workbench-shell {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+
         .composer-panel,
         .side-note-panel,
         .input-stage,
@@ -326,6 +332,20 @@ def render_theme() -> None:
             gap: 0.75rem;
         }
 
+        .action-toolbar {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.85rem;
+            margin-top: 0.9rem;
+        }
+
+        .toolbar-note {
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 0.95rem;
+            margin: 0.15rem 0 0 0;
+        }
+
         .section-card {
             padding: 1.2rem 1.25rem 0.95rem 1.25rem;
             margin-top: 1rem;
@@ -373,7 +393,7 @@ def render_theme() -> None:
         }
 
         @media (max-width: 900px) {
-            .note-grid, .composer-shell, .input-shell {
+            .note-grid, .composer-shell, .input-shell, .action-toolbar {
                 grid-template-columns: 1fr;
             }
 
@@ -453,18 +473,17 @@ def render_action_stage() -> None:
     st.markdown(
         """
         <section class="action-stage">
-            <div class="panel-kicker">Action Stage</div>
-            <h2 class="panel-title">把操作放到这一侧，但别让它压住整张页面</h2>
+            <div class="panel-kicker">Primary Actions</div>
+            <h2 class="panel-title">三个主功能并列放在输入区下面，上传后立刻启动</h2>
             <p class="action-copy">
-                这里负责生成、重置和切换输出模式。材料输入留在左边，
-                动作与节奏留在右边，让布局更自由，但依然顺手。
+                课程总结、英文 Quiz 和精读翻译稿现在是三个独立入口。
+                你可以只触发其中一个功能，不需要再把 Quiz 或翻译当作附带选项。
             </p>
             <div class="action-pills">
-                <span class="action-pill">PDF / TXT / Mixed</span>
                 <span class="action-pill">Summary</span>
                 <span class="action-pill">Quiz</span>
                 <span class="action-pill">Reading Guide</span>
-                <span class="action-pill">Export</span>
+                <span class="action-pill">Reset</span>
             </div>
         </section>
         """,
@@ -482,7 +501,7 @@ def init_state() -> None:
         "quiz_submitted": False,
         "quiz_score": 0,
         "quiz_feedback": [],
-        "_trigger_generate": False,
+        "active_task": "",
         "bilingual_pairs": [],
         "reading_markdown": "",
     }
@@ -501,7 +520,7 @@ def reset_state() -> None:
         "quiz_submitted",
         "quiz_score",
         "quiz_feedback",
-        "_trigger_generate",
+        "active_task",
         "bilingual_pairs",
         "reading_markdown",
     ]
@@ -611,12 +630,12 @@ def render_sidebar() -> None:
     st.sidebar.markdown(
         """
         1. 上传 PDF 课件、TXT 字幕，或两者之一
-        2. 可选勾选英文 Quiz / 精读翻译稿
+        2. 选择要单独触发的主功能
         3. 填写课程名称或主题（可选）
-        4. 点击生成总结
+        4. 点击对应按钮直接生成
         """
     )
-    st.sidebar.info("支持仅 PDF、仅 TXT，或 PDF + TXT 融合生成总结，也兼容纯中文文档与英文精读翻译。")
+    st.sidebar.info("支持仅 PDF、仅 TXT，或 PDF + TXT 融合处理。课程总结、英文 Quiz、精读翻译稿都可以单独生成。")
 
 
 def main() -> None:
@@ -626,82 +645,97 @@ def main() -> None:
     render_header()
     render_composer_intro()
 
-    left_col, right_col = st.columns([1.18, 0.82], gap="large")
+    st.markdown('<section class="workbench-shell">', unsafe_allow_html=True)
+    st.markdown('<section class="input-stage">', unsafe_allow_html=True)
+    upload_col1, upload_col2 = st.columns(2)
+    with upload_col1:
+        pdf_file = st.file_uploader("上传 PDF 课件", type=["pdf"])
+    with upload_col2:
+        txt_file = st.file_uploader("上传 TXT 字幕", type=["txt"])
+    course_name = st.text_input("课程名称 / 本次主题（可选）", placeholder="例如：Project Management - Stakeholder Analysis")
+    st.markdown("</section>", unsafe_allow_html=True)
 
-    with left_col:
-        st.markdown('<section class="input-stage">', unsafe_allow_html=True)
-        upload_col1, upload_col2 = st.columns(2)
-        with upload_col1:
-            pdf_file = st.file_uploader("上传 PDF 课件", type=["pdf"])
-        with upload_col2:
-            txt_file = st.file_uploader("上传 TXT 字幕", type=["txt"])
-        course_name = st.text_input("课程名称 / 本次主题（可选）", placeholder="例如：Project Management - Stakeholder Analysis")
-        st.markdown("</section>", unsafe_allow_html=True)
+    render_action_stage()
+    st.markdown('<div class="action-toolbar">', unsafe_allow_html=True)
+    summary_clicked = st.button("生成课程总结", type="primary", use_container_width=True)
+    quiz_clicked = st.button("生成英文 Quiz", use_container_width=True)
+    reading_clicked = st.button("生成精读翻译稿", use_container_width=True)
+    reset_clicked = st.button("重置页面", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(
+        '<p class="toolbar-note">上传完材料后，直接点击你需要的那个功能即可。三个功能彼此独立，生成后也会分别保留，不会互相覆盖。</p>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("</section>", unsafe_allow_html=True)
 
-    with right_col:
-        render_action_stage()
-        st.markdown('<div class="action-button-stack">', unsafe_allow_html=True)
-        generate_quiz = st.checkbox("同时生成英文单选题 Quiz", value=False)
-        generate_reading_guide = st.checkbox("同时生成精读翻译稿", value=False)
-        if st.button("生成课程总结", type="primary", use_container_width=True):
-            st.session_state["_trigger_generate"] = True
-        if st.button("重置页面", use_container_width=True):
-            reset_state()
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    if summary_clicked:
+        st.session_state.active_task = "summary"
+    elif quiz_clicked:
+        st.session_state.active_task = "quiz"
+    elif reading_clicked:
+        st.session_state.active_task = "reading"
 
-    if st.session_state["_trigger_generate"]:
-        st.session_state["_trigger_generate"] = False
+    if reset_clicked:
+        reset_state()
+        st.rerun()
+
+    if st.session_state.active_task:
+        active_task = st.session_state.active_task
+        st.session_state.active_task = ""
         if not pdf_file and not txt_file:
             st.error("请至少上传一个 PDF 课件或 TXT 字幕文件。")
             return
 
-        with st.spinner("正在提取内容并生成总结..."):
+        task_label = {
+            "summary": "课程总结",
+            "quiz": "英文 Quiz",
+            "reading": "精读翻译稿",
+        }.get(active_task, "内容")
+
+        with st.spinner(f"正在提取内容并生成{task_label}..."):
             try:
                 pdf_text = extract_pdf_text(pdf_file) if pdf_file else ""
                 transcript_text = read_txt_file(txt_file) if txt_file else ""
+                st.session_state.pdf_text_preview = pdf_text
+                st.session_state.transcript_text_preview = transcript_text
 
-                summary = summarize_course_material(
-                    pdf_text=pdf_text,
-                    transcript_text=transcript_text,
-                    course_name=course_name.strip(),
-                )
+                if active_task == "summary":
+                    summary = summarize_course_material(
+                        pdf_text=pdf_text,
+                        transcript_text=transcript_text,
+                        course_name=course_name.strip(),
+                    )
+                    st.session_state.summary_markdown = summary
+                    st.session_state.bilingual_pairs = parse_bilingual_pairs(summary)
 
-                quiz_markdown = ""
-                if generate_quiz:
+                elif active_task == "quiz":
                     quiz_markdown = generate_quiz_material(
                         pdf_text=pdf_text,
                         transcript_text=transcript_text,
                         course_name=course_name.strip(),
                     )
+                    st.session_state.quiz_markdown = quiz_markdown
+                    st.session_state.quiz_items = parse_quiz_markdown(quiz_markdown)
+                    st.session_state.quiz_submitted = False
+                    st.session_state.quiz_score = 0
+                    st.session_state.quiz_feedback = []
 
-                reading_markdown = ""
-                if generate_reading_guide:
+                elif active_task == "reading":
                     reading_markdown = generate_reading_guide_material(
                         pdf_text=pdf_text,
                         transcript_text=transcript_text,
                         course_name=course_name.strip(),
                     )
-
-                st.session_state.summary_markdown = summary
-                st.session_state.quiz_markdown = quiz_markdown
-                st.session_state.reading_markdown = reading_markdown
-                st.session_state.pdf_text_preview = pdf_text
-                st.session_state.transcript_text_preview = transcript_text
-                st.session_state.quiz_items = parse_quiz_markdown(quiz_markdown) if quiz_markdown else []
-                st.session_state.bilingual_pairs = parse_bilingual_pairs(summary)
-                st.session_state.quiz_submitted = False
-                st.session_state.quiz_score = 0
-                st.session_state.quiz_feedback = []
+                    st.session_state.reading_markdown = reading_markdown
             except ValueError as exc:
                 st.error(str(exc))
                 return
             except Exception as exc:  # noqa: BLE001
-                st.error("生成总结时发生未预期错误，请稍后重试。")
+                st.error(f"生成{task_label}时发生未预期错误，请稍后重试。")
                 st.exception(exc)
                 return
 
-        st.success("总结生成完成。")
+        st.success(f"{task_label}生成完成。")
 
     if st.session_state.summary_markdown:
         st.markdown(
