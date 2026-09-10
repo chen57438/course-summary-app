@@ -101,14 +101,22 @@ def _clip_text(text: str, limit: int) -> str:
 
 
 def _read_openai_compatible_response(provider: ProviderClient, prompt: str, max_output_tokens: int) -> str:
+    request_kwargs: dict[str, Any] = {
+        "model": provider.model_name,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2,
+        "max_tokens": max_output_tokens,
+        "timeout": REQUEST_TIMEOUT_SECONDS,
+    }
+    # DeepSeek V4 enables thinking by default. For a long course prompt, its
+    # reasoning can consume the entire completion budget before a final answer
+    # is emitted. This workspace needs the final study material, so keep the
+    # response in non-thinking mode unless a separate reasoning workflow is
+    # added later.
+    if provider.provider == "deepseek":
+        request_kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
     try:
-        response = provider.client.chat.completions.create(
-            model=provider.model_name,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=max_output_tokens,
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
+        response = provider.client.chat.completions.create(**request_kwargs)
     except Exception as exc:  # API SDKs surface many provider-specific exception types
         raise ValueError(
             f"{provider.display_name} could not complete the request. "
