@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.parser import ParsedMaterial
+from src.parser import ParsedMaterial, PdfVisualPage
 
 
 SUMMARY_SECTION_ORDER = [
@@ -16,6 +16,18 @@ SUMMARY_SECTION_ORDER = [
     "Possible Exam Focus",
     "Key Takeaways",
 ]
+
+SECTION_DISPLAY_TITLES = {
+    "Overview": "课程概览",
+    "Learning Objectives": "学习目标",
+    "Key Concepts": "核心知识点",
+    "Key Terms": "核心术语",
+    "Lecture Highlights": "课件与课堂重点",
+    "Professor Emphasis": "教授特别强调",
+    "Examples from Lecture": "课堂案例",
+    "Possible Exam Focus": "值得复习的重点",
+    "Key Takeaways": "复习要点",
+}
 
 
 @dataclass(frozen=True)
@@ -48,16 +60,25 @@ def combine_materials(materials: list[ParsedMaterial], kind: str) -> str:
     return "\n\n".join(f"[{item.name}]\n{item.text}" for item in successful).strip()
 
 
+def collect_visual_pages(materials: list[ParsedMaterial]) -> list[PdfVisualPage]:
+    """Return the capped parser-selected pages; never render a whole PDF blindly."""
+    return [page for item in materials if item.kind == "pdf" for page in item.visual_pages][:4]
+
+
 def source_registry(materials: list[ParsedMaterial]) -> dict[str, SourceReference]:
     registry: dict[str, SourceReference] = {}
-    for kind, label in (("pdf", "Slides"), ("txt", "Lecture transcript")):
-        excerpts = [item.text[:900].strip() for item in materials if item.kind == kind and item.text]
-        if excerpts:
+    for kind, label in (("pdf", "课件"), ("txt", "课堂字幕")):
+        matching = [item for item in materials if item.kind == kind and (item.text or item.visual_pages)]
+        excerpts = [item.text[:900].strip() for item in matching if item.text]
+        if matching:
+            if not excerpts and kind == "pdf":
+                image_pages = [str(page.page_number) for item in matching for page in item.visual_pages]
+                excerpts = [f"已导入图片内容的课件页面：第 {'、'.join(image_pages)} 页。"]
             registry[kind] = SourceReference(
                 source_type=kind,
                 label=label,
                 excerpt="\n\n".join(excerpts),
-                note="General source context - precise page or timestamp metadata is not available for this result yet.",
+                note="这里展示的是材料原文片段；当前结果尚未提供精确页码或时间戳。",
             )
     return registry
 
@@ -95,7 +116,7 @@ def _normalise_section_title(title: str) -> tuple[str, str]:
     for alias, canonical in aliases.items():
         if alias in lowered or alias in clean:
             return canonical, clean
-    return clean or "Study notes", clean or "Study notes"
+    return clean or "学习笔记", clean or "学习笔记"
 
 
 def _sources_for_section(key: str, sources: dict[str, SourceReference]) -> list[str]:
@@ -122,7 +143,7 @@ def parse_summary_sections(markdown: str, sources: dict[str, SourceReference]) -
         sections.append(
             ResultSection(
                 key=key,
-                title=display_title,
+                title=SECTION_DISPLAY_TITLES.get(key, display_title),
                 markdown=body,
                 source_labels=_sources_for_section(key, sources),
             )
@@ -147,19 +168,19 @@ def parse_summary_sections(markdown: str, sources: dict[str, SourceReference]) -
 def expected_outputs(selected_tools: list[str]) -> list[str]:
     output_map = {
         "summary": [
-            "Structured lecture summary and learning objectives",
-            "Key concepts and terminology for revision",
-            "Professor-emphasized points and lecture examples when the uploaded materials support them",
-            "Possible exam focus without unsupported exam claims",
+            "结构化课程总结与学习目标",
+            "便于复习的核心概念与术语",
+            "有材料依据时的教授强调与课堂案例",
+            "不夸大、不臆测的复习重点",
         ],
         "quiz": [
-            "8-12 English quiz questions when the material supports that depth",
-            "Independent answers and explanations for each option",
+            "材料充足时生成 8–12 道英文测验题",
+            "每道题独立显示答案与选项解析",
         ],
         "reading": [
-            "A guided reading draft that follows the material's teaching order",
-            "Chinese and English paired for side-by-side reading",
-            "Definitions, examples and key expressions kept in context",
+            "按课程讲授顺序组织的精读稿",
+            "中英对照阅读内容",
+            "保留定义、案例与重点表达的上下文",
         ],
     }
     return [item for tool in selected_tools for item in output_map.get(tool, [])]

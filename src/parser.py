@@ -1,8 +1,17 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import BinaryIO
+
+
+@dataclass
+class PdfVisualPage:
+    """A deliberately small set of image-heavy PDF pages for vision analysis."""
+
+    page_number: int
+    image_bytes: bytes
+    source_name: str = ""
 
 
 @dataclass
@@ -12,15 +21,16 @@ class ParsedMaterial:
     kind: str
     name: str
     text: str = ""
-    status: str = "Uploaded"
-    message: str = "Ready to parse"
+    status: str = "已上传"
+    message: str = "等待解析"
     char_count: int = 0
     page_count: int | None = None
     warning: str = ""
+    visual_pages: list[PdfVisualPage] = field(default_factory=list)
 
     @property
     def source_label(self) -> str:
-        return "Slides" if self.kind == "pdf" else "Lecture transcript"
+        return "课件" if self.kind == "pdf" else "课堂字幕"
 
 
 def _read_upload_bytes(upload: BinaryIO) -> bytes:
@@ -53,33 +63,56 @@ def extract_pdf_text(pdf_file: BinaryIO) -> str:
 
 
 def parse_pdf_upload(pdf_file: BinaryIO, name: str) -> ParsedMaterial:
-    """Extract PDF text and return honest parsing metadata for the workspace UI."""
+    """Extract text and preserve only image-heavy pages for an optional vision pass."""
     import fitz
 
-    material = ParsedMaterial(kind="pdf", name=name, status="Parsing", message="Extracting text from slides")
+    material = ParsedMaterial(kind="pdf", name=name, status="解析中", message="正在提取课件文字与图像页")
     try:
         pdf_bytes = _read_upload_bytes(pdf_file)
         if not pdf_bytes:
-            raise ValueError("This PDF is empty.")
+            raise ValueError("PDF 文件为空。")
         document = fitz.open(stream=pdf_bytes, filetype="pdf")
         material.page_count = len(document)
-        pages = [page.get_text("text").strip() for page in document]
+        pages: list[str] = []
+        visual_candidates: list[int] = []
+        for index, page in enumerate(document):
+            page_text = page.get_text("text").strip()
+            pages.append(page_text)
+            # Avoid sending every decorative slide image. These pages either have
+            # little selectable text or are likely image/diagram-led.
+            if page.get_images(full=True) and len(page_text) < 180:
+                visual_candidates.append(index)
+
+        for index in visual_candidates[:4]:
+            pixmap = document.load_page(index).get_pixmap(matrix=fitz.Matrix(1.25, 1.25), alpha=False)
+            png_bytes = pixmap.tobytes("png")
+            if png_bytes:
+                material.visual_pages.append(PdfVisualPage(page_number=index + 1, image_bytes=png_bytes, source_name=name))
         document.close()
         material.text = "\n\n".join(page for page in pages if page).strip()
         material.char_count = len(material.text)
         if not material.text:
-            raise ValueError("No selectable text was found. This may be a scanned PDF.")
+            if not material.visual_pages:
+                raise ValueError("未找到可读取文字或图像页面，请确认 PDF 文件完整可打开。")
+            material.status = "警告"
+            material.message = f"未提取到可选文字；已保留 {len(material.visual_pages)} 页图像内容用于视觉分析"
+            material.warning = "这可能是扫描版 PDF。生成时会尝试通过视觉模型理解已保留的页面。"
+            return material
         low_text_threshold = max(180, (material.page_count or 1) * 45)
         if material.char_count < low_text_threshold:
-            material.warning = "Very little text was extracted. This may be a scanned PDF, so generation quality could be affected."
-            material.status = "Warning"
-            material.message = "Parsed with a quality warning"
+            material.warning = "提取到的文字较少，可能是扫描版 PDF，生成质量可能受影响。"
+            if material.visual_pages:
+                material.warning += f" 已保留 {len(material.visual_pages)} 页图像内容用于视觉分析。"
+            material.status = "警告"
+            material.message = "已解析，但建议结合图像分析"
         else:
-            material.status = "Parsed successfully"
-            material.message = "Text extracted successfully"
+            material.status = "解析成功"
+            material.message = "课件文字提取成功"
+            if material.visual_pages:
+                material.message += f"；另有 {len(material.visual_pages)} 页图像内容等待视觉分析"
     except Exception as exc:  # noqa: BLE001 - surfaced as student-friendly status in the app
-        material.status = "Failed"
-        material.message = str(exc) or "We could not parse this PDF."
+        material.status = "失败"
+        material.message = str(exc) or "无法解析此 PDF。"
         material.text = ""
         material.char_count = 0
     return material
@@ -132,15 +165,15 @@ def read_txt_file(txt_file: BinaryIO) -> str:
 
 def parse_txt_upload(txt_file: BinaryIO, name: str) -> ParsedMaterial:
     """Decode a transcript and retain its actual length for UI feedback."""
-    material = ParsedMaterial(kind="txt", name=name, status="Parsing", message="Reading transcript")
+    material = ParsedMaterial(kind="txt", name=name, status="解析中", message="正在读取课堂字幕")
     try:
         material.text = read_txt_file(txt_file)
         material.char_count = len(material.text)
-        material.status = "Parsed successfully"
-        material.message = "Transcript read successfully"
+        material.status = "解析成功"
+        material.message = "课堂字幕读取成功"
     except Exception as exc:  # noqa: BLE001
-        material.status = "Failed"
-        material.message = str(exc) or "We could not read this TXT file."
+        material.status = "失败"
+        material.message = str(exc) or "无法读取此 TXT 文件。"
     return material
 
 

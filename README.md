@@ -5,6 +5,7 @@
 ## 功能
 
 - 支持上传一个或多个 PDF 课件、TXT 字幕，或两者组合
+- 对文字较少、图表主导或扫描版 PDF，最多挑选 4 页图像内容交由 DeepSeek 视觉模型补充理解；不会把整份课件无差别转图上传
 - 在生成前显示每份材料的真实解析状态、页数、提取字符数与扫描版 PDF 风险提示
 - 以阶段式状态呈现真实流程：读取材料、确认解析、组织知识、生成学习材料、完成结果；不显示虚构百分比
 - 可组合生成课程总结、英文 Quiz、精读翻译稿，并在生成前明确展示预期输出
@@ -48,6 +49,7 @@ cp .env.example .env
 AI_PROVIDER=deepseek
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_VISION_MODEL=deepseek-v4-flash-vision-exp
 ```
 
 也可使用 `AI_PROVIDER=gemini` + `GOOGLE_API_KEY`，或 `AI_PROVIDER=openai` + `OPENAI_API_KEY`。完整示例见 [`.env.example`](.env.example)。
@@ -115,6 +117,7 @@ GEMINI_MODEL="gemini-2.5-flash-lite"
 # AI_PROVIDER="deepseek"
 # DEEPSEEK_API_KEY="你的_deepseek_api_key"
 # DEEPSEEK_MODEL="deepseek-v4-flash"
+# DEEPSEEK_VISION_MODEL="deepseek-v4-flash-vision-exp"
 
 # 或 OpenAI
 # AI_PROVIDER="openai"

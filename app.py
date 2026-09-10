@@ -12,11 +12,12 @@ from src.bilingual_parser import parse_bilingual_pairs
 from src.parser import ParsedMaterial, parse_pdf_upload, parse_txt_upload
 from src.quiz_parser import parse_quiz_markdown
 from src.summarizer import (
+    describe_pdf_visuals,
     generate_quiz_material,
     generate_reading_guide_material,
     summarize_course_material,
 )
-from src.workspace import SourceReference, combine_materials, expected_outputs, parse_summary_sections, source_registry
+from src.workspace import SourceReference, collect_visual_pages, combine_materials, expected_outputs, parse_summary_sections, source_registry
 
 
 st.set_page_config(
@@ -250,7 +251,7 @@ def render_theme() -> None:
         }
 
         .composer-panel::after {
-            content: "STUDIO";
+            content: "学习";
             position: absolute;
             right: 18px;
             top: 14px;
@@ -483,7 +484,7 @@ def render_header() -> None:
     st.markdown(
         """
         <section class="hero-shell">
-            <div class="eyebrow">Course Studio</div>
+            <div class="eyebrow">课程学习工作台</div>
             <h1 class="hero-title">课程总结生成器</h1>
             <p class="hero-subtitle">
                 把课件、字幕和课堂材料整理成更可读、更可复习的输出。
@@ -491,15 +492,15 @@ def render_header() -> None:
             </p>
             <div class="note-grid">
                 <div class="note-chip">
-                    <strong>Structured Notes</strong>
+                    <strong>结构化笔记</strong>
                     结构化中文总结，强调知识框架、案例与重点术语。
                 </div>
                 <div class="note-chip">
-                    <strong>Assessment Ready</strong>
+                    <strong>随时自测</strong>
                     可选生成英文单选题，适合课后练习与教学评估。
                 </div>
                 <div class="note-chip">
-                    <strong>Export Workflow</strong>
+                    <strong>导出与归档</strong>
                     支持 Markdown 与 PDF 导出，方便归档、分享与打印。
                 </div>
             </div>
@@ -514,7 +515,7 @@ def render_composer_intro() -> None:
         """
         <section class="composer-shell">
             <div class="composer-panel">
-                <div class="panel-kicker">Input Studio</div>
+                <div class="panel-kicker">导入材料</div>
                 <h2 class="panel-title">上传材料，生成可直接复习与分发的课程内容</h2>
                 <p class="panel-copy">
                     你可以上传 PDF、TXT，或者两者一起。系统会自动提炼知识结构、教授强调、术语框架与练习题，
@@ -522,12 +523,12 @@ def render_composer_intro() -> None:
                 </p>
             </div>
             <aside class="side-note-panel">
-                <div class="panel-kicker">Capabilities</div>
+                <div class="panel-kicker">支持能力</div>
                 <h3 class="panel-title">当前支持的工作流</h3>
                 <ul class="micro-list">
                     <li>纯中文课件与字幕总结</li>
                     <li>中英混合管理课程资料整理</li>
-                    <li>Summary + Quiz 一体化复习输出</li>
+                    <li>课程总结与英文测验一体化复习</li>
                     <li>英文材料精读翻译稿</li>
                 </ul>
             </aside>
@@ -541,17 +542,17 @@ def render_action_stage() -> None:
     st.markdown(
         """
         <section class="action-stage">
-            <div class="panel-kicker">Primary Actions</div>
+            <div class="panel-kicker">学习方式</div>
             <h2 class="panel-title">三个主功能并列放在输入区下面，上传后立刻启动</h2>
             <p class="action-copy">
                 课程总结、英文 Quiz 和精读翻译稿现在是三个独立入口。
                 你可以只触发其中一个功能，不需要再把 Quiz 或翻译当作附带选项。
             </p>
             <div class="action-pills">
-                <span class="action-pill">Summary</span>
-                <span class="action-pill">Quiz</span>
-                <span class="action-pill">Reading Guide</span>
-                <span class="action-pill">Reset</span>
+                <span class="action-pill">课程总结</span>
+                <span class="action-pill">英文测验</span>
+                <span class="action-pill">精读翻译</span>
+                <span class="action-pill">重置</span>
             </div>
         </section>
         """,
@@ -596,11 +597,11 @@ def reset_state() -> None:
 
 
 def render_sidebar() -> None:
-    st.sidebar.title("Study Workspace")
+    st.sidebar.title("课程学习工作台")
     st.sidebar.markdown("导入材料、选择学习方式，再把结果转成可复习的学习资产。")
     st.sidebar.divider()
-    st.sidebar.markdown("**How it works**")
-    st.sidebar.markdown("1. Add slides or a transcript\n2. Confirm parsing status\n3. Choose study tools\n4. Review, practise and revisit")
+    st.sidebar.markdown("**使用流程**")
+    st.sidebar.markdown("1. 导入课件或字幕\n2. 确认解析状态\n3. 选择学习方式\n4. 阅读、练习与复习")
     st.sidebar.info("结果与学习标记保存在当前浏览器会话；不会上传到额外数据库。")
 
 
@@ -633,10 +634,10 @@ def render_workspace_nav() -> None:
     st.markdown(
         """
         <section class="workspace-nav">
-            <strong>Learning flow</strong><span class="nav-arrow">→</span>
-            <span>Read</span><span class="nav-arrow">→</span><span>Review</span>
-            <span class="nav-arrow">→</span><span>Quiz</span><span class="nav-arrow">→</span>
-            <span>Check mistakes</span><span class="nav-arrow">→</span><span>Review again</span>
+            <strong>学习闭环</strong><span class="nav-arrow">→</span>
+            <span>阅读</span><span class="nav-arrow">→</span><span>复习</span>
+            <span class="nav-arrow">→</span><span>测验</span><span class="nav-arrow">→</span>
+            <span>查看错题</span><span class="nav-arrow">→</span><span>再次复习</span>
         </section>
         """,
         unsafe_allow_html=True,
@@ -645,29 +646,31 @@ def render_workspace_nav() -> None:
 
 def render_material_card(material: ParsedMaterial) -> None:
     class_name = ""
-    if material.status == "Warning":
+    if material.status == "警告":
         class_name = " warning"
-    elif material.status == "Failed":
+    elif material.status == "失败":
         class_name = " failed"
     badge_class = ""
-    if material.status == "Warning":
+    if material.status == "警告":
         badge_class = " warning"
-    elif material.status == "Failed":
+    elif material.status == "失败":
         badge_class = " failed"
-    metadata = ["PDF slides" if material.kind == "pdf" else "TXT transcript"]
+    metadata = ["PDF 课件" if material.kind == "pdf" else "TXT 课堂字幕"]
     if material.page_count is not None:
-        metadata.append(f"{material.page_count} pages")
+        metadata.append(f"{material.page_count} 页")
     if material.char_count:
-        metadata.append(f"{material.char_count:,} characters extracted")
+        metadata.append(f"已提取 {material.char_count:,} 个字符")
+    if material.visual_pages:
+        metadata.append(f"已保留 {len(material.visual_pages)} 页图片")
     st.markdown(
         f"""
         <section class="material-card{class_name}">
-            <div class="status-kicker">Material</div>
+            <div class="status-kicker">材料</div>
             <h3 class="material-title">{html.escape(material.name)}</h3>
             <span class="status-badge{badge_class}">{html.escape(material.status)}</span>
             <p class="material-meta">{' · '.join(metadata)}</p>
             <p class="material-meta">{html.escape(material.message)}</p>
-            {f'<p class="material-meta"><strong>Note:</strong> {html.escape(material.warning)}</p>' if material.warning else ''}
+            {f'<p class="material-meta"><strong>提示：</strong> {html.escape(material.warning)}</p>' if material.warning else ''}
         </section>
         """,
         unsafe_allow_html=True,
@@ -677,12 +680,12 @@ def render_material_card(material: ParsedMaterial) -> None:
 def render_materials(materials: list[ParsedMaterial]) -> None:
     st.markdown("### Materials")
     if not materials:
-        st.info("Add at least one PDF slide deck or TXT transcript to begin. You can upload multiple files of either type.")
+        st.info("请先上传至少一份 PDF 课件或 TXT 课堂字幕。两种材料都支持多文件上传。")
         return
     for material in materials:
         render_material_card(material)
-    if any(material.status == "Failed" for material in materials):
-        st.warning("Files that failed parsing will not be included. You can remove them and upload a readable copy without losing the other materials.")
+    if any(material.status == "失败" for material in materials):
+        st.warning("解析失败的文件不会参与生成。你可以删除后重新上传，不会影响其他已成功解析的材料。")
 
 
 TOOL_CONFIG = {
@@ -693,7 +696,7 @@ TOOL_CONFIG = {
         "output": "输出：章节结构、重点知识、核心术语、教授强调内容",
     },
     "quiz": {
-        "title": "Quiz",
+        "title": "英文测验",
         "class_name": "quiz",
         "fit": "适合：检查自己是否真正掌握",
         "output": "输出：英文选择题、用户作答、答案解析",
@@ -709,7 +712,7 @@ TOOL_CONFIG = {
 
 def render_tool_picker() -> list[str]:
     st.markdown("### Study Tools")
-    st.caption("Choose one learning mode, or combine several. Your choices only affect what will be generated - they do not change the uploaded materials.")
+    st.caption("可选择一种或组合多种学习方式。选择只影响生成结果，不会改动你上传的材料。")
     selected: list[str] = []
     columns = st.columns(3)
     for column, (key, config) in zip(columns, TOOL_CONFIG.items()):
@@ -717,7 +720,7 @@ def render_tool_picker() -> list[str]:
             st.markdown(
                 f"""
                 <section class="tool-card {config['class_name']}">
-                    <div class="tool-eyebrow">Study mode</div>
+                    <div class="tool-eyebrow">学习方式</div>
                     <h3 class="tool-title">{config['title']}</h3>
                     <p class="tool-copy">{config['fit']}</p>
                     <p class="tool-output">{config['output']}</p>
@@ -725,7 +728,7 @@ def render_tool_picker() -> list[str]:
                 """,
                 unsafe_allow_html=True,
             )
-            if st.checkbox(f"Select {config['title']}", key=f"select_{key}"):
+            if st.checkbox(f"选择{config['title']}", key=f"select_{key}"):
                 selected.append(key)
     return selected
 
@@ -733,64 +736,69 @@ def render_tool_picker() -> list[str]:
 def render_expectation(selected_tools: list[str], has_valid_material: bool) -> None:
     st.markdown('<section class="expectation-panel">', unsafe_allow_html=True)
     if not selected_tools:
-        st.markdown("**Choose a study tool to see your result plan.**")
-        st.caption("You can select one tool for a focused task, or combine tools for a complete review session.")
+        st.markdown("**请选择学习方式，查看将获得的结果。**")
+        st.caption("你可以只专注一种任务，也可以组合成完整复习流程。")
     else:
         labels = " + ".join(TOOL_CONFIG[tool]["title"] for tool in selected_tools)
-        st.markdown(f"**You selected: {labels}**")
-        st.markdown("**You will receive:**")
+        st.markdown(f"**你选择了：{labels}**")
+        st.markdown("**你将获得：**")
         for item in expected_outputs(selected_tools):
             st.markdown(f"- {item}")
         if not has_valid_material:
-            st.caption("Add a readable PDF or TXT file before generating.")
+            st.caption("请先上传可读取的 PDF 或 TXT 文件，再开始生成。")
     st.markdown("</section>", unsafe_allow_html=True)
 
 
 def _run_generation(selected_tools: list[str], materials: list[ParsedMaterial], course_name: str) -> None:
     pdf_text = combine_materials(materials, "pdf")
     transcript_text = combine_materials(materials, "txt")
-    if not pdf_text and not transcript_text:
-        st.error("We could not find readable text in your uploads. Try a text-based PDF or a UTF-8 TXT transcript, then generate again.")
+    visual_pages = collect_visual_pages(materials)
+    if not pdf_text and not transcript_text and not visual_pages:
+        st.error("上传材料中没有可读取的文字或图像页面。请确认 PDF 不是损坏文件，或重新上传 UTF-8 编码的 TXT。")
         return
 
-    with st.status("Preparing your study workspace", expanded=True) as status:
-        status.write("1. Reading materials")
-        status.write("2. Confirming parsed course content")
+    with st.status("正在准备学习材料", expanded=True) as status:
+        status.write("1. 正在读取材料")
+        status.write("2. 正在确认已解析的课程内容")
 
         def update_stage(stage: str) -> None:
             status.write(f"• {stage}")
             status.update(label=stage, state="running")
 
         try:
+            visual_context = ""
+            if visual_pages:
+                status.write(f"3. 正在分析 {len(visual_pages)} 页图表、扫描页或图片文字")
+                visual_context = describe_pdf_visuals(visual_pages, on_stage=update_stage)
             for tool in selected_tools:
                 if tool == "summary":
-                    result = summarize_course_material(pdf_text, transcript_text, course_name, on_stage=update_stage)
+                    result = summarize_course_material(pdf_text, transcript_text, course_name, visual_context=visual_context, on_stage=update_stage)
                     st.session_state.summary_markdown = result
                     st.session_state.bilingual_pairs = parse_bilingual_pairs(result)
                     st.session_state.summary_overrides = {}
                 elif tool == "quiz":
-                    result = generate_quiz_material(pdf_text, transcript_text, course_name, on_stage=update_stage)
+                    result = generate_quiz_material(pdf_text, transcript_text, course_name, visual_context=visual_context, on_stage=update_stage)
                     st.session_state.quiz_markdown = result
                     st.session_state.quiz_items = parse_quiz_markdown(result)
                     st.session_state.quiz_revealed = set()
                     st.session_state.quiz_attempts = {}
                 elif tool == "reading":
-                    result = generate_reading_guide_material(pdf_text, transcript_text, course_name, on_stage=update_stage)
+                    result = generate_reading_guide_material(pdf_text, transcript_text, course_name, visual_context=visual_context, on_stage=update_stage)
                     st.session_state.reading_markdown = result
-            status.update(label="Study materials ready", state="complete", expanded=False)
+            status.update(label="学习材料已生成", state="complete", expanded=False)
         except ValueError as exc:
-            status.update(label="Generation could not be completed", state="error")
-            st.error(f"Generation failed. Your uploaded files are still available. {exc}")
+            status.update(label="生成未能完成", state="error")
+            st.error(f"生成失败。已上传的文件仍保留在当前页面。{exc}")
         except Exception:  # noqa: BLE001 - detailed error stays out of the student UI
-            status.update(label="Generation could not be completed", state="error")
-            st.error("Generation failed. Your uploaded files are still available. Please try again in a moment.")
+            status.update(label="生成未能完成", state="error")
+            st.error("生成失败。已上传的文件仍保留在当前页面，请稍后重试。")
 
 
 def _copy_button(value: str, key: str) -> None:
     safe_value = json.dumps(value).replace("</", "<\\/")
     components.html(
-        f"""<button id=\"{key}\" style=\"border:1px solid #ead7cb;border-radius:10px;background:#fffaf6;color:#4a3025;padding:8px 11px;cursor:pointer;font:600 13px system-ui\">Copy</button>
-        <script>document.getElementById({json.dumps(key)}).onclick = async () => {{ await navigator.clipboard.writeText({safe_value}); document.getElementById({json.dumps(key)}).textContent = 'Copied'; }};</script>""",
+        f"""<button id=\"{key}\" style=\"border:1px solid #ead7cb;border-radius:10px;background:#fffaf6;color:#4a3025;padding:8px 11px;cursor:pointer;font:600 13px system-ui\">复制</button>
+        <script>document.getElementById({json.dumps(key)}).onclick = async () => {{ await navigator.clipboard.writeText({safe_value}); document.getElementById({json.dumps(key)}).textContent = '已复制'; }};</script>""",
         height=42,
     )
 
@@ -799,11 +807,11 @@ def _render_source_reference(source_labels: list[str]) -> None:
     if not source_labels:
         return
     labels = " · ".join(source_labels)
-    st.markdown(f'<div class="source-note"><span class="source-badge">Source</span><strong>{html.escape(labels)}</strong><p>General source context is available below. Precise pages and timestamps are not available for this result, so none are shown.</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="source-note"><span class="source-badge">来源</span><strong>{html.escape(labels)}</strong><p>下方可查看材料原文片段。当前结果没有精确页码或时间戳，因此不会显示虚假定位。</p></div>', unsafe_allow_html=True)
     sources = st.session_state.sources
     for source in sources.values():
         if isinstance(source, SourceReference) and source.label in source_labels:
-            with st.expander(f"View original context · {source.label}"):
+            with st.expander(f"查看原文片段 · {source.label}"):
                 st.caption(source.note)
                 st.text(source.excerpt)
 
@@ -821,11 +829,11 @@ def _materialize_summary() -> str:
 def render_summary_results(course_name: str) -> None:
     if not st.session_state.summary_markdown:
         return
-    st.markdown('<section class="section-card"><div class="section-label">Study Results</div><h2 class="section-title">课程总结</h2></section>', unsafe_allow_html=True)
-    st.caption("Each section is intentionally separated so you can read, copy or edit one study module without losing the rest of the result.")
+    st.markdown('<section class="section-card"><div class="section-label">学习结果</div><h2 class="section-title">课程总结</h2></section>', unsafe_allow_html=True)
+    st.caption("每个部分均可单独阅读、复制或编辑，不会影响其他学习内容。")
     sections = parse_summary_sections(st.session_state.summary_markdown, st.session_state.sources)
     if not sections:
-        st.warning("The summary was generated, but its structure could not be recognized. You can still download the original Markdown below.")
+        st.warning("总结已生成，但暂时无法识别结构。你仍可在下方下载原始 Markdown。")
         st.markdown(st.session_state.summary_markdown)
         return
 
@@ -837,28 +845,28 @@ def render_summary_results(course_name: str) -> None:
             with title_col:
                 st.markdown(f"#### {section.title}")
                 if section.source_labels:
-                    st.caption("Source: " + " · ".join(section.source_labels))
+                    st.caption("来源：" + " · ".join(section.source_labels))
             with action_col:
                 edit_col, regen_col, copy_col = st.columns(3)
                 with edit_col:
-                    if st.button("Edit", key=f"edit-{section_id}"):
+                    if st.button("编辑", key=f"edit-{section_id}"):
                         st.session_state.editing_section = section_id
                 with regen_col:
-                    if st.button("Regenerate", key=f"regen-{section_id}"):
-                        st.info("This module is ready for a future section-level API. The current generator only supports whole-course generation, so this action will not silently rerun or overwrite your other notes.")
+                    if st.button("重新生成", key=f"regen-{section_id}"):
+                        st.info("已为模块级生成预留入口。当前后端只支持整节课生成，因此此操作不会悄悄覆盖你的其他笔记。")
                 with copy_col:
                     _copy_button(content, f"copy-{section_id}")
 
             if st.session_state.editing_section == section_id:
-                draft = st.text_area("Edit this study module", value=content, height=220, key=f"draft-{section_id}")
+                draft = st.text_area("编辑此学习模块", value=content, height=220, key=f"draft-{section_id}")
                 save_col, cancel_col = st.columns(2)
                 with save_col:
-                    if st.button("Save module", key=f"save-{section_id}", type="primary"):
+                    if st.button("保存模块", key=f"save-{section_id}", type="primary"):
                         st.session_state.summary_overrides[section_id] = draft.strip()
                         st.session_state.editing_section = ""
                         st.rerun()
                 with cancel_col:
-                    if st.button("Cancel", key=f"cancel-{section_id}"):
+                    if st.button("取消", key=f"cancel-{section_id}"):
                         st.session_state.editing_section = ""
                         st.rerun()
             else:
@@ -869,23 +877,23 @@ def render_summary_results(course_name: str) -> None:
     pdf_bytes = build_summary_pdf(exported_summary, course_name or "课程总结")
     download_col1, download_col2 = st.columns(2)
     with download_col1:
-        st.download_button("Download Markdown", exported_summary, "course_summary.md", "text/markdown", use_container_width=True)
+        st.download_button("下载 Markdown", exported_summary, "课程总结.md", "text/markdown", use_container_width=True)
     with download_col2:
-        st.download_button("Download PDF", pdf_bytes, "course_summary.pdf", "application/pdf", use_container_width=True)
+        st.download_button("下载 PDF", pdf_bytes, "课程总结.pdf", "application/pdf", use_container_width=True)
 
 
 def render_reading_results() -> None:
     if not st.session_state.reading_markdown:
         return
-    st.markdown('<section class="section-card"><div class="section-label">Reading</div><h2 class="section-title">精读翻译稿</h2></section>', unsafe_allow_html=True)
+    st.markdown('<section class="section-card"><div class="section-label">精读</div><h2 class="section-title">精读翻译稿</h2></section>', unsafe_allow_html=True)
     pairs = parse_bilingual_pairs(st.session_state.reading_markdown)
     if not pairs:
         st.markdown(st.session_state.reading_markdown)
     else:
-        st.caption("Read Chinese and English in parallel. Key terminology remains in context rather than being detached into a separate translation list.")
+        st.caption("中英文对照阅读，核心术语会保留在原本的上下文中。")
         for index, pair in enumerate(pairs, start=1):
             with st.container(border=True):
-                st.caption(f"Part {index:02d} · {pair['section'] or 'Guided reading'}")
+                st.caption(f"第 {index:02d} 部分 · {pair['section'] or '精读内容'}")
                 left, right = st.columns(2)
                 with left:
                     st.markdown("**中文整理**")
@@ -894,89 +902,89 @@ def render_reading_results() -> None:
                     st.markdown("**English**")
                     st.markdown(pair["en"])
         _render_source_reference([source.label for source in st.session_state.sources.values()])
-    st.download_button("Download guided reading Markdown", st.session_state.reading_markdown, "guided_translation.md", "text/markdown", use_container_width=True)
+    st.download_button("下载精读翻译 Markdown", st.session_state.reading_markdown, "精读翻译稿.md", "text/markdown", use_container_width=True)
 
 
 def render_quiz_section() -> None:
     if not st.session_state.quiz_markdown:
         return
-    st.markdown('<section class="section-card"><div class="section-label">Practice</div><h2 class="section-title">English Quiz</h2></section>', unsafe_allow_html=True)
+    st.markdown('<section class="section-card"><div class="section-label">练习</div><h2 class="section-title">英文测验</h2></section>', unsafe_allow_html=True)
     items = st.session_state.quiz_items
     if not items:
-        st.warning("Quiz was generated, but it could not be converted into interactive questions. You can still download the complete Quiz Markdown.")
-        st.download_button("Download Quiz Markdown", st.session_state.quiz_markdown, "course_quiz.md", "text/markdown", use_container_width=True)
+        st.warning("测验已生成，但暂时无法转为交互题目。你仍可下载完整的测验 Markdown。")
+        st.download_button("下载测验 Markdown", st.session_state.quiz_markdown, "英文测验.md", "text/markdown", use_container_width=True)
         return
 
     attempts = st.session_state.quiz_attempts
     for index, item in enumerate(items, start=1):
         with st.container(border=True):
-            st.markdown(f"**Question {index}** · {item['question']}")
+            st.markdown(f"**第 {index} 题** · {item['question']}")
             options = [f"{letter}. {item['options'][letter]}" for letter in ("A", "B", "C", "D")]
-            selected = st.radio("Your answer", options, index=None, key=f"quiz-answer-{index}", label_visibility="collapsed")
+            selected = st.radio("你的答案", options, index=None, key=f"quiz-answer-{index}", label_visibility="collapsed")
             check_col, answer_col, status_col = st.columns([0.26, 0.26, 0.48])
             with check_col:
-                if st.button("Check", key=f"check-{index}"):
+                if st.button("检查答案", key=f"check-{index}"):
                     if selected:
                         attempts[index] = selected[0] == item["answer"]
                     else:
-                        st.warning("Choose an answer before checking it.")
+                        st.warning("请先选择一个答案。")
             with answer_col:
-                if st.button("Show answer", key=f"reveal-{index}"):
+                if st.button("显示答案", key=f"reveal-{index}"):
                     st.session_state.quiz_revealed.add(index)
             with status_col:
                 if index in attempts:
                     if attempts[index]:
-                        st.success("Correct - mark this concept as understood below.")
+                        st.success("回答正确，可以在下方标记为已掌握。")
                     else:
-                        st.error("Not quite - review the explanation and consider saving it for later.")
+                        st.error("还差一点，建议阅读解析并标记为稍后复习。")
             if index in st.session_state.quiz_revealed:
-                st.info(f"Answer: {item['answer']}")
+                st.info(f"答案：{item['answer']}")
                 for letter in ("A", "B", "C", "D"):
-                    explanation = item["explanations"].get(letter, "Explanation was not returned for this option.")
+                    explanation = item["explanations"].get(letter, "此选项暂未返回解析。")
                     st.markdown(f"- **{letter}.** {explanation}")
     if attempts:
         score = sum(attempts.values())
-        st.caption(f"Checked answers: {score} correct out of {len(attempts)} attempted.")
+        st.caption(f"已检查 {len(attempts)} 题，其中答对 {score} 题。")
     _render_source_reference([source.label for source in st.session_state.sources.values()])
-    st.download_button("Download Quiz Markdown", st.session_state.quiz_markdown, "course_quiz.md", "text/markdown", use_container_width=True)
+    st.download_button("下载测验 Markdown", st.session_state.quiz_markdown, "英文测验.md", "text/markdown", use_container_width=True)
 
 
 def render_learning_loop() -> None:
     if not any((st.session_state.summary_markdown, st.session_state.quiz_markdown, st.session_state.reading_markdown)):
         return
-    st.markdown('<section class="section-card"><div class="section-label">Learning Loop</div><h2 class="section-title">Keep the next review visible</h2></section>', unsafe_allow_html=True)
-    st.markdown('<section class="study-loop"><span class="study-step">Read</span><span class="study-step">Review</span><span class="study-step">Quiz</span><span class="study-step">Check mistakes</span><span class="study-step">Review again</span></section>', unsafe_allow_html=True)
-    st.caption("These lightweight study markers are stored only in this session. The state shape is ready for future mastery, spaced-repetition and cross-lecture features.")
+    st.markdown('<section class="section-card"><div class="section-label">学习闭环</div><h2 class="section-title">安排下一次复习</h2></section>', unsafe_allow_html=True)
+    st.markdown('<section class="study-loop"><span class="study-step">阅读</span><span class="study-step">复习</span><span class="study-step">测验</span><span class="study-step">查看错题</span><span class="study-step">再次复习</span></section>', unsafe_allow_html=True)
+    st.caption("这些轻量标记只保存在当前会话，未来可自然扩展为掌握度、间隔复习和跨课程关联。")
     record = st.session_state.learning_record
     left, middle, right = st.columns(3)
     with left:
-        if st.button("Mark as understood", use_container_width=True):
+        if st.button("标记为已掌握", use_container_width=True):
             record["understood"].add("current_lecture")
             record["review_later"].discard("current_lecture")
             record["needs_practice"].discard("current_lecture")
     with middle:
-        if st.button("Review later", use_container_width=True):
+        if st.button("稍后复习", use_container_width=True):
             record["review_later"].add("current_lecture")
             record["understood"].discard("current_lecture")
     with right:
-        if st.button("Need more practice", use_container_width=True):
+        if st.button("需要更多练习", use_container_width=True):
             record["needs_practice"].add("current_lecture")
             record["understood"].discard("current_lecture")
     if "current_lecture" in record["understood"]:
-        st.success("Marked as understood for this session.")
+        st.success("已在当前会话中标记为已掌握。")
     elif "current_lecture" in record["needs_practice"]:
-        st.warning("Saved as needing more practice. Revisit the Quiz or regenerate a targeted set when module-level generation becomes available.")
+        st.warning("已标记为需要更多练习。可重新做测验，或在未来模块级生成可用后生成针对性练习。")
     elif "current_lecture" in record["review_later"]:
-        st.info("Saved for later review in this session.")
+        st.info("已在当前会话中标记为稍后复习。")
 
 
 def render_debug_previews() -> None:
     if st.session_state.pdf_text_preview:
-        with st.expander("Parsed slide text preview"):
-            st.text_area("PDF text", st.session_state.pdf_text_preview[:5000], height=240, disabled=True)
+        with st.expander("查看已解析的课件文字"):
+            st.text_area("PDF 文字", st.session_state.pdf_text_preview[:5000], height=240, disabled=True)
     if st.session_state.transcript_text_preview:
-        with st.expander("Parsed transcript preview"):
-            st.text_area("Transcript text", st.session_state.transcript_text_preview[:5000], height=240, disabled=True)
+        with st.expander("查看已解析的课堂字幕"):
+            st.text_area("课堂字幕文字", st.session_state.transcript_text_preview[:5000], height=240, disabled=True)
 
 
 def main() -> None:
@@ -990,14 +998,14 @@ def main() -> None:
     st.markdown('<section class="input-stage">', unsafe_allow_html=True)
     upload_col1, upload_col2 = st.columns(2)
     with upload_col1:
-        pdf_files = st.file_uploader("Add PDF slides", type=["pdf"], accept_multiple_files=True, help="Text-based PDFs work best. Scanned PDFs may be usable but can contain little extractable text.")
+        pdf_files = st.file_uploader("添加 PDF 课件", type=["pdf"], accept_multiple_files=True, help="可提取文字的 PDF 效果最佳。扫描版、图表和图片文字会在检测到时交给视觉模型补充理解。")
     with upload_col2:
-        txt_files = st.file_uploader("Add TXT transcripts", type=["txt"], accept_multiple_files=True, help="UTF-8, UTF-8 with BOM, GB18030 and Big5 are supported.")
-    course_name = st.text_input("Course name / lecture topic (optional)", placeholder="e.g. Project Management - Stakeholder Analysis")
+        txt_files = st.file_uploader("添加 TXT 课堂字幕", type=["txt"], accept_multiple_files=True, help="支持 UTF-8、UTF-8 with BOM、GB18030 和 Big5 编码。")
+    course_name = st.text_input("课程名称 / 讲座主题（可选）", placeholder="例如：项目管理——利益相关者分析")
     st.markdown("</section>", unsafe_allow_html=True)
     materials = sync_materials(pdf_files, txt_files)
     render_materials(materials)
-    valid_materials = [material for material in materials if material.text]
+    valid_materials = [material for material in materials if material.text or material.visual_pages]
     if valid_materials:
         st.session_state.pdf_text_preview = combine_materials(materials, "pdf")
         st.session_state.transcript_text_preview = combine_materials(materials, "txt")
@@ -1006,9 +1014,9 @@ def main() -> None:
     render_expectation(selected_tools, bool(valid_materials))
     action_col, reset_col = st.columns([0.76, 0.24])
     with action_col:
-        generate_clicked = st.button("Generate selected study materials", type="primary", use_container_width=True, disabled=not selected_tools or not valid_materials)
+        generate_clicked = st.button("生成已选学习材料", type="primary", use_container_width=True, disabled=not selected_tools or not valid_materials)
     with reset_col:
-        reset_clicked = st.button("Reset workspace", use_container_width=True)
+        reset_clicked = st.button("重置工作台", use_container_width=True)
     if reset_clicked:
         reset_state()
         st.rerun()

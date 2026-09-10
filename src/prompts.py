@@ -7,12 +7,14 @@ def build_summary_prompt(
     course_name: str = "",
     transcript_study_view: str = "",
     transcript_topic_map: str = "",
+    visual_context: str = "",
 ) -> str:
     course_line = f"补充课程名称或主题：{course_name}\n" if course_name else ""
     pdf_section = pdf_text if pdf_text.strip() else "未提供 PDF 课件内容。"
     transcript_section = transcript_text if transcript_text.strip() else "未提供 TXT 字幕内容。"
     study_view_section = transcript_study_view if transcript_study_view.strip() else "未提供处理后的字幕精读视图。"
     topic_map_section = transcript_topic_map if transcript_topic_map.strip() else "未提供字幕主题梳理。"
+    visual_section = visual_context if visual_context.strip() else "未提供课件图片视觉说明。"
 
     return f"""
 # Role
@@ -23,6 +25,7 @@ def build_summary_prompt(
 2. 【讲稿字幕 (TXT)】: {transcript_section} (这是教授口述的细节、案例和解释)
 3. 【字幕精读视图】: {study_view_section} (这是去掉明显口头噪音后，保留教学内容的字幕版本)
 4. 【字幕主题梳理】: {topic_map_section} (这是根据字幕内容抽出的主题线索)
+5. 【课件图片视觉说明】: {visual_section} (这是对图表、流程图、扫描页或图片文字的逐页可见内容描述；只可使用其中明确出现的信息)
 
 # Task
 请根据已提供的材料生成总结：如果同时有课件和讲稿，就做有层次的融合总结；如果只提供其中一种材料，就基于该材料独立总结核心知识点。你的目标是让学生即便没看视频，也能掌握本节课的核心知识。
@@ -38,6 +41,7 @@ def build_summary_prompt(
 3. 结构化输出：使用 Markdown 标题、列表和表格，增加可读性。
 4. 请优先整合：
    - 先以课件中的定义、框架、流程与视觉重点建立课程结构
+   - 如果提供了课件图片视觉说明，把它作为图表、流程、公式和图片文字的补充依据，不要把图片说明臆测成原文
    - 再用字幕补充教授解释、案例、提醒，以及课件没有展开的细节
    - 不要把两份材料简单拼接或重复改写；同一概念先说明课件骨架，再只写字幕新增信息
 5. 如果课件与讲稿信息存在补充、细化或轻微差异，请在相关模块中清楚区分“课件内容”和“课堂补充”，不要简单重复。
@@ -119,10 +123,11 @@ def build_summary_prompt(
 """.strip()
 
 
-def build_quiz_prompt(pdf_text: str, transcript_text: str, course_name: str = "") -> str:
+def build_quiz_prompt(pdf_text: str, transcript_text: str, course_name: str = "", visual_context: str = "") -> str:
     course_line = f"Course name or topic: {course_name}\n" if course_name else ""
     pdf_section = pdf_text if pdf_text.strip() else "No PDF slide content was provided."
     transcript_section = transcript_text if transcript_text.strip() else "No TXT transcript content was provided."
+    visual_section = visual_context if visual_context.strip() else "No slide-image analysis was provided."
 
     return f"""
 # Role
@@ -131,6 +136,7 @@ You are an experienced university teaching assistant in project management. Your
 # Input Data
 1. Slides content: {pdf_section} (use this as the course structure, definitions, frameworks and process reference)
 2. Transcript content: {transcript_section} (use this only to supplement the slides with spoken explanations, examples, clarifications and explicitly stated emphasis)
+3. Slide-image analysis: {visual_section} (use only as a grounded supplement for visible diagrams, tables, formulas and image text)
 
 # Task
 Create an English-only single-choice quiz that helps students review the lecture. If both sources are provided, first anchor each question in the slide framework, then use transcript-only detail only when it genuinely adds an explanation, example or clarification. Do not create duplicate questions by rephrasing the same material from both inputs. If only one source is provided, generate the quiz based only on that source.
@@ -203,10 +209,11 @@ Now generate the quiz.
 """.strip()
 
 
-def build_reading_prompt(pdf_text: str, transcript_text: str, course_name: str = "") -> str:
+def build_reading_prompt(pdf_text: str, transcript_text: str, course_name: str = "", visual_context: str = "") -> str:
     course_line = f"补充课程名称或主题：{course_name}\n" if course_name else ""
     pdf_section = pdf_text if pdf_text.strip() else "未提供 PDF 课件内容。"
     transcript_section = transcript_text if transcript_text.strip() else "未提供 TXT 字幕内容。"
+    visual_section = visual_context if visual_context.strip() else "未提供课件图片视觉说明。"
 
     return f"""
 # Role
@@ -215,6 +222,7 @@ def build_reading_prompt(pdf_text: str, transcript_text: str, course_name: str =
 # Input Data
 1. 【课件内容 (PDF)】: {pdf_section}
 2. 【讲稿字幕 (TXT)】: {transcript_section}
+3. 【课件图片视觉说明】: {visual_section}
 
 # Task
 请根据已提供的材料生成一份“精读翻译稿”：

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import base64
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -10,13 +11,14 @@ import google.generativeai as genai
 import streamlit as st
 from google.api_core.exceptions import ResourceExhausted, RetryError, ServiceUnavailable
 
-from src.parser import build_transcript_study_view, normalize_study_text
+from src.parser import PdfVisualPage, build_transcript_study_view, normalize_study_text
 from src.prompts import build_quiz_prompt, build_reading_chunk_prompt, build_summary_prompt
 
 
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash"
+DEFAULT_DEEPSEEK_VISION_MODEL = "deepseek-v4-flash-vision-exp"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MAX_PDF_CHARS = 22000
 MAX_TRANSCRIPT_CHARS = 32000
@@ -119,15 +121,76 @@ def _read_openai_compatible_response(provider: ProviderClient, prompt: str, max_
         response = provider.client.chat.completions.create(**request_kwargs)
     except Exception as exc:  # API SDKs surface many provider-specific exception types
         raise ValueError(
-            f"{provider.display_name} could not complete the request. "
-            "Check the API key, available balance and model setting, then try again."
+            f"{provider.display_name} 未能完成请求。请检查 API Key、账户余额和模型配置后重试。"
         ) from exc
 
     choices = getattr(response, "choices", [])
     content = getattr(choices[0].message, "content", "") if choices else ""
     if not content or not content.strip():
-        raise ValueError(f"{provider.display_name} did not return usable content. Please try again.")
+        raise ValueError(f"{provider.display_name} 没有返回可用内容，请稍后重试。")
     return content.strip()
+
+
+def describe_pdf_visuals(
+    visual_pages: list[PdfVisualPage],
+    on_stage: Callable[[str], None] | None = None,
+) -> str:
+    """Describe only parser-selected PDF pages before the text generation pass.
+
+    The current hybrid path is intentionally DeepSeek-only: it uses the
+    provider's vision model for image input, then provides its grounded page
+    descriptions to the normal text model. This keeps large PDF image payloads
+    out of the summary, quiz and reading calls.
+    """
+    if not visual_pages:
+        return ""
+
+    provider = _configure_client()
+    if provider.provider != "deepseek":
+        raise ValueError("当前图像页分析需要在 Secrets 中设置 AI_PROVIDER=deepseek。")
+
+    vision_model = _setting("DEEPSEEK_VISION_MODEL") or DEFAULT_DEEPSEEK_VISION_MODEL
+    descriptions: list[str] = []
+    for page in visual_pages:
+        if on_stage:
+            on_stage(f"正在理解课件图片（第 {page.page_number} 页）")
+        image_data_url = "data:image/png;base64," + base64.b64encode(page.image_bytes).decode("ascii")
+        try:
+            response = provider.client.chat.completions.create(
+                model=vision_model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    "请只描述这张课程课件页面中可见、与学习有关的信息："
+                                    "标题、图表关系、流程、公式、表格结论、图中标注与示例。"
+                                    "用简洁中文写成可供后续课程总结使用的笔记；看不清或未出现的信息不要推测。"
+                                ),
+                            },
+                            {"type": "image_url", "image_url": {"url": image_data_url, "detail": "low"}},
+                        ],
+                    }
+                ],
+                temperature=0.1,
+                max_tokens=1000,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+                extra_body={"thinking": {"type": "disabled"}},
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"第 {page.page_number} 页图像分析失败，请稍后重试。") from exc
+
+        choices = getattr(response, "choices", [])
+        content = getattr(choices[0].message, "content", "") if choices else ""
+        if content and content.strip():
+            source_name = f"《{page.source_name}》" if page.source_name else "课件"
+            descriptions.append(f"[{source_name} 图片第 {page.page_number} 页]\n{content.strip()}")
+
+    if not descriptions:
+        raise ValueError("视觉模型没有返回可用的课件图片说明，请稍后重试。")
+    return "\n\n".join(descriptions)
 
 
 def _generate_text(
@@ -136,7 +199,7 @@ def _generate_text(
     on_stage: Callable[[str], None] | None = None,
 ) -> str:
     if on_stage:
-        on_stage("Generating study materials")
+        on_stage("正在生成学习材料")
     if provider.provider != "gemini":
         return _read_openai_compatible_response(provider, prompt, max_output_tokens=4096)
     try:
@@ -171,7 +234,7 @@ def _generate_text_with_limit(
     on_stage: Callable[[str], None] | None = None,
 ) -> str:
     if on_stage:
-        on_stage("Generating study materials")
+        on_stage("正在生成学习材料")
     if provider.provider != "gemini":
         return _read_openai_compatible_response(provider, prompt, max_output_tokens=max_output_tokens)
     try:
@@ -249,13 +312,14 @@ def summarize_course_material(
     pdf_text: str,
     transcript_text: str,
     course_name: str = "",
+    visual_context: str = "",
     on_stage: Callable[[str], None] | None = None,
 ) -> str:
-    if not pdf_text.strip() and not transcript_text.strip():
+    if not pdf_text.strip() and not transcript_text.strip() and not visual_context.strip():
         raise ValueError("请至少上传一个 PDF 课件或 TXT 字幕文件。")
 
     if on_stage:
-        on_stage("Organizing knowledge")
+        on_stage("正在整理知识结构")
     provider = _configure_client()
     clipped_pdf_text = _clip_text(normalize_study_text(pdf_text), MAX_PDF_CHARS)
     cleaned_transcript, transcript_topic_map = build_transcript_study_view(transcript_text)
@@ -267,11 +331,12 @@ def summarize_course_material(
         course_name=course_name,
         transcript_study_view=cleaned_transcript,
         transcript_topic_map=transcript_topic_map,
+        visual_context=visual_context,
     )
 
     result = _generate_text(provider, prompt, on_stage=on_stage)
     if on_stage:
-        on_stage("Finalizing results")
+        on_stage("正在整理结果")
     return result
 
 
@@ -279,13 +344,14 @@ def generate_quiz_material(
     pdf_text: str,
     transcript_text: str,
     course_name: str = "",
+    visual_context: str = "",
     on_stage: Callable[[str], None] | None = None,
 ) -> str:
-    if not pdf_text.strip() and not transcript_text.strip():
+    if not pdf_text.strip() and not transcript_text.strip() and not visual_context.strip():
         raise ValueError("请至少上传一个 PDF 课件或 TXT 字幕文件来生成 quiz。")
 
     if on_stage:
-        on_stage("Organizing knowledge")
+        on_stage("正在整理知识结构")
     provider = _configure_client()
     clipped_pdf_text = _clip_text(pdf_text, MAX_PDF_CHARS)
     clipped_transcript_text = _clip_text(transcript_text, MAX_TRANSCRIPT_CHARS)
@@ -293,11 +359,12 @@ def generate_quiz_material(
         pdf_text=clipped_pdf_text,
         transcript_text=clipped_transcript_text,
         course_name=course_name,
+        visual_context=visual_context,
     )
 
     result = _generate_text(provider, prompt, on_stage=on_stage)
     if on_stage:
-        on_stage("Finalizing results")
+        on_stage("正在整理结果")
     return result
 
 
@@ -305,13 +372,14 @@ def generate_reading_guide_material(
     pdf_text: str,
     transcript_text: str,
     course_name: str = "",
+    visual_context: str = "",
     on_stage: Callable[[str], None] | None = None,
 ) -> str:
-    if not pdf_text.strip() and not transcript_text.strip():
+    if not pdf_text.strip() and not transcript_text.strip() and not visual_context.strip():
         raise ValueError("请至少上传一个 PDF 课件或 TXT 字幕文件来生成精读翻译稿。")
 
     if on_stage:
-        on_stage("Organizing knowledge")
+        on_stage("正在整理知识结构")
     provider = _configure_client()
     clipped_pdf_text = _clip_text(pdf_text, READING_MAX_PDF_CHARS)
     clipped_transcript_text = _clip_text(transcript_text, READING_MAX_TRANSCRIPT_CHARS)
@@ -327,6 +395,8 @@ def generate_reading_guide_material(
         combined_text = f"[课件内容]\n{clipped_pdf_text}"
     else:
         combined_text = f"[讲稿字幕]\n{clipped_transcript_text}"
+    if visual_context.strip():
+        combined_text += f"\n\n[课件图片视觉说明]\n{visual_context}"
 
     chunks = _split_text_into_chunks(
         combined_text,
@@ -355,7 +425,7 @@ def generate_reading_guide_material(
     total_chunks = len(chunks)
     for index, chunk in enumerate(chunks, start=1):
         if on_stage:
-            on_stage(f"Generating study materials - reading part {index} of {total_chunks}")
+            on_stage(f"正在生成精读稿（第 {index}/{total_chunks} 部分）")
         chunk_prompt = build_reading_chunk_prompt(
             chunk_text=chunk,
             chunk_index=index,
@@ -366,5 +436,5 @@ def generate_reading_guide_material(
         parts.append(part_text.strip())
 
     if on_stage:
-        on_stage("Finalizing results")
+        on_stage("正在整理结果")
     return "\n\n".join([intro_text.strip(), *parts]).strip()
