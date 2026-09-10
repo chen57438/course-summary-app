@@ -204,6 +204,13 @@ def build_transcript_study_view(
     transcript_text: str,
     max_sentences: int = 180,
 ) -> tuple[str, str]:
+    """Create a chronological, coverage-first view of a long transcript.
+
+    A transcript from a two- or three-hour lecture cannot safely be represented
+    by its first few hundred sentences: that silently drops the later half of
+    the lecture. This helper samples useful sentences from across the whole
+    time line. The original text remains available in the workspace.
+    """
     sentences = split_transcript_sentences(transcript_text)
     if not sentences:
         return "", ""
@@ -242,10 +249,14 @@ def build_transcript_study_view(
         ("Stakeholder Management", ("stakeholder", "customer", "client", "supplier", "owner")),
         ("Culture and International Context", ("culture", "cultural", "international", "geographical", "country")),
         ("Resource Scheduling", ("resource", "manpower", "material", "supply chain", "labor")),
+        ("Risk Management", ("risk", "threat", "opportunity", "uncertainty", "mitigate", "contingency")),
         ("Assignment and Quiz Notes", ("assignment", "quiz", "slide", "group", "presentation")),
     ]
 
-    selected: list[str] = []
+    # Remove obvious administration / greeting noise, but do not use a
+    # "first N sentences" rule. That was the source of incomplete coverage
+    # for long lectures.
+    candidate_sentences: list[str] = []
     topical_examples: dict[str, list[str]] = {name: [] for name, _ in topic_keywords}
     started = False
     for sentence in sentences:
@@ -257,16 +268,31 @@ def build_transcript_study_view(
         if any(keyword in lowered for keyword in low_signal_keywords):
             continue
 
-        matched = False
+        candidate_sentences.append(sentence)
         for topic_name, keywords in topic_keywords:
             if any(keyword in lowered for keyword in keywords):
                 if len(topical_examples[topic_name]) < 4:
                     topical_examples[topic_name].append(sentence)
-                matched = True
-        if matched or len(selected) < max_sentences:
-            selected.append(sentence)
-        if len(selected) >= max_sentences:
-            break
+
+    if not candidate_sentences:
+        return "", ""
+
+    # Divide the lecture chronologically and retain an even number of
+    # sentences from each slice. This keeps evidence from its opening, middle
+    # and closing sections without fabricating timestamps.
+    bucket_count = min(12, len(candidate_sentences))
+    selected: list[str] = []
+    for bucket_index in range(bucket_count):
+        start = bucket_index * len(candidate_sentences) // bucket_count
+        end = (bucket_index + 1) * len(candidate_sentences) // bucket_count
+        bucket = candidate_sentences[start:end]
+        quota = max_sentences // bucket_count + (1 if bucket_index < max_sentences % bucket_count else 0)
+        if not bucket or quota <= 0:
+            continue
+        if len(bucket) <= quota:
+            selected.extend(bucket)
+            continue
+        selected.extend(bucket[index * len(bucket) // quota] for index in range(quota))
 
     cleaned_transcript = " ".join(selected).strip()
 

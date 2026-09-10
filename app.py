@@ -831,6 +831,7 @@ def render_summary_results(course_name: str) -> None:
         return
     st.markdown('<section class="section-card"><div class="section-label">学习结果</div><h2 class="section-title">课程总结</h2></section>', unsafe_allow_html=True)
     st.caption("每个部分均可单独阅读、复制或编辑，不会影响其他学习内容。")
+    st.info("“学习目标”只概括本节课学完后能做到什么，因此会保持在 3–5 条；完整的课堂内容、案例与细节请查看下方“核心知识点”。长字幕会按整段课程时间线覆盖，而非只取开头。")
     sections = parse_summary_sections(st.session_state.summary_markdown, st.session_state.sources)
     if not sections:
         st.warning("总结已生成，但暂时无法识别结构。你仍可在下方下载原始 Markdown。")

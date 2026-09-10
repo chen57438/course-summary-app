@@ -21,7 +21,9 @@ DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash"
 DEFAULT_DEEPSEEK_VISION_MODEL = "deepseek-v4-flash-vision-exp"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MAX_PDF_CHARS = 22000
-MAX_TRANSCRIPT_CHARS = 32000
+# The study view is chronological and coverage-first. Keep a sufficiently
+# generous budget so a long lecture does not silently become just its opening.
+MAX_TRANSCRIPT_CHARS = 52000
 READING_MAX_PDF_CHARS = 50000
 READING_MAX_TRANSCRIPT_CHARS = 80000
 READING_CHUNK_CHARS = 7000
@@ -323,6 +325,9 @@ def summarize_course_material(
     provider = _configure_client()
     clipped_pdf_text = _clip_text(normalize_study_text(pdf_text), MAX_PDF_CHARS)
     cleaned_transcript, transcript_topic_map = build_transcript_study_view(transcript_text)
+    # The study view contains representative teaching content from across the
+    # lecture. Passing a raw clipped transcript here used to discard all later
+    # sections before the model saw them.
     transcript_input = cleaned_transcript or transcript_text
     clipped_transcript_text = _clip_text(normalize_study_text(transcript_input), MAX_TRANSCRIPT_CHARS)
     prompt = build_summary_prompt(
