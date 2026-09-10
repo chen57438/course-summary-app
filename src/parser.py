@@ -1,13 +1,39 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import BinaryIO
+
+
+@dataclass
+class ParsedMaterial:
+    """A parsed upload plus only the metadata the UI can state truthfully."""
+
+    kind: str
+    name: str
+    text: str = ""
+    status: str = "Uploaded"
+    message: str = "Ready to parse"
+    char_count: int = 0
+    page_count: int | None = None
+    warning: str = ""
+
+    @property
+    def source_label(self) -> str:
+        return "Slides" if self.kind == "pdf" else "Lecture transcript"
+
+
+def _read_upload_bytes(upload: BinaryIO) -> bytes:
+    if hasattr(upload, "getvalue"):
+        return upload.getvalue()
+    upload.seek(0)
+    return upload.read()
 
 
 def extract_pdf_text(pdf_file: BinaryIO) -> str:
     import fitz
 
-    pdf_bytes = pdf_file.read()
+    pdf_bytes = _read_upload_bytes(pdf_file)
     if not pdf_bytes:
         raise ValueError("上传的 PDF 文件为空。")
 
@@ -24,6 +50,39 @@ def extract_pdf_text(pdf_file: BinaryIO) -> str:
         raise ValueError("无法从 PDF 中提取到文本，请确认课件不是纯图片扫描版。")
 
     return combined_text
+
+
+def parse_pdf_upload(pdf_file: BinaryIO, name: str) -> ParsedMaterial:
+    """Extract PDF text and return honest parsing metadata for the workspace UI."""
+    import fitz
+
+    material = ParsedMaterial(kind="pdf", name=name, status="Parsing", message="Extracting text from slides")
+    try:
+        pdf_bytes = _read_upload_bytes(pdf_file)
+        if not pdf_bytes:
+            raise ValueError("This PDF is empty.")
+        document = fitz.open(stream=pdf_bytes, filetype="pdf")
+        material.page_count = len(document)
+        pages = [page.get_text("text").strip() for page in document]
+        document.close()
+        material.text = "\n\n".join(page for page in pages if page).strip()
+        material.char_count = len(material.text)
+        if not material.text:
+            raise ValueError("No selectable text was found. This may be a scanned PDF.")
+        low_text_threshold = max(180, (material.page_count or 1) * 45)
+        if material.char_count < low_text_threshold:
+            material.warning = "Very little text was extracted. This may be a scanned PDF, so generation quality could be affected."
+            material.status = "Warning"
+            material.message = "Parsed with a quality warning"
+        else:
+            material.status = "Parsed successfully"
+            material.message = "Text extracted successfully"
+    except Exception as exc:  # noqa: BLE001 - surfaced as student-friendly status in the app
+        material.status = "Failed"
+        material.message = str(exc) or "We could not parse this PDF."
+        material.text = ""
+        material.char_count = 0
+    return material
 
 
 def extract_pdf_outline(pdf_file: BinaryIO, max_pages: int = 12, max_chars_per_page: int = 1200) -> str:
@@ -56,7 +115,7 @@ def extract_pdf_outline(pdf_file: BinaryIO, max_pages: int = 12, max_chars_per_p
 
 
 def read_txt_file(txt_file: BinaryIO) -> str:
-    raw_bytes = txt_file.read()
+    raw_bytes = _read_upload_bytes(txt_file)
     if not raw_bytes:
         raise ValueError("上传的 TXT 文件为空。")
 
@@ -69,6 +128,20 @@ def read_txt_file(txt_file: BinaryIO) -> str:
             continue
 
     raise ValueError("TXT 文件编码无法识别，请保存为 UTF-8 后重试。")
+
+
+def parse_txt_upload(txt_file: BinaryIO, name: str) -> ParsedMaterial:
+    """Decode a transcript and retain its actual length for UI feedback."""
+    material = ParsedMaterial(kind="txt", name=name, status="Parsing", message="Reading transcript")
+    try:
+        material.text = read_txt_file(txt_file)
+        material.char_count = len(material.text)
+        material.status = "Parsed successfully"
+        material.message = "Transcript read successfully"
+    except Exception as exc:  # noqa: BLE001
+        material.status = "Failed"
+        material.message = str(exc) or "We could not read this TXT file."
+    return material
 
 
 def normalize_study_text(text: str) -> str:

@@ -1,16 +1,22 @@
 from __future__ import annotations
 
+import hashlib
+import html
+import json
+
 import streamlit as st
+import streamlit.components.v1 as components
 
 from src.exporter import build_summary_pdf
 from src.bilingual_parser import parse_bilingual_pairs
-from src.parser import extract_pdf_text, read_txt_file
+from src.parser import ParsedMaterial, parse_pdf_upload, parse_txt_upload
 from src.quiz_parser import parse_quiz_markdown
 from src.summarizer import (
     generate_quiz_material,
     generate_reading_guide_material,
     summarize_course_material,
 )
+from src.workspace import SourceReference, combine_materials, expected_outputs, parse_summary_sections, source_registry
 
 
 st.set_page_config(
@@ -392,6 +398,68 @@ def render_theme() -> None:
             line-height: 1.92;
         }
 
+        .workspace-nav, .expectation-panel, .material-card, .tool-card, .study-loop, .source-note {
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.72);
+            border-radius: 18px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .workspace-nav {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.85rem 1rem;
+            margin: 0.2rem 0 1.2rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .workspace-nav strong { color: var(--ink); }
+        .nav-arrow { color: var(--accent); font-weight: 800; }
+
+        .material-card, .tool-card, .expectation-panel, .study-loop, .source-note {
+            padding: 1rem 1.05rem;
+            margin: 0.45rem 0;
+        }
+
+        .material-card { border-left: 5px solid var(--teal); }
+        .material-card.warning { border-left-color: #d88b16; }
+        .material-card.failed { border-left-color: #c7494d; }
+        .status-kicker, .tool-eyebrow, .result-eyebrow {
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted);
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .material-title, .tool-title { margin: 0.2rem 0; color: var(--ink); font-size: 1.08rem; }
+        .material-meta, .tool-copy, .expectation-panel p, .source-note p { margin: 0.25rem 0; color: var(--muted); font-size: 0.9rem; line-height: 1.65; }
+        .status-badge, .source-badge {
+            display: inline-block;
+            padding: 0.25rem 0.52rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(31, 138, 130, 0.13);
+            color: #126f68;
+            margin-right: 0.35rem;
+        }
+        .status-badge.warning { background: rgba(216, 139, 22, 0.14); color: #8a5700; }
+        .status-badge.failed { background: rgba(199, 73, 77, 0.12); color: #a73034; }
+        .tool-card { min-height: 215px; border-top: 4px solid var(--accent); }
+        .tool-card.quiz { border-top-color: var(--violet); }
+        .tool-card.reading { border-top-color: var(--teal); }
+        .tool-output { color: var(--ink); font-size: 0.9rem; line-height: 1.6; margin: 0.6rem 0 0; }
+        .expectation-panel { background: linear-gradient(135deg, rgba(255, 244, 237, 0.94), rgba(255, 252, 248, 0.9)); }
+        .study-loop { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+        .study-step { padding: 0.38rem 0.6rem; border-radius: 999px; background: rgba(122, 111, 240, 0.09); color: #4f45b5; font-size: 0.86rem; }
+        .source-note { background: rgba(31, 138, 130, 0.055); box-shadow: none; }
+
+        div[data-testid="stStatusWidget"] { border-radius: 18px; border: 1px solid var(--line); }
+
         @media (max-width: 900px) {
             .note-grid, .composer-shell, .input-shell, .action-toolbar {
                 grid-template-columns: 1fr;
@@ -501,9 +569,19 @@ def init_state() -> None:
         "quiz_submitted": False,
         "quiz_score": 0,
         "quiz_feedback": [],
-        "active_task": "",
         "bilingual_pairs": [],
         "reading_markdown": "",
+        "materials": [],
+        "material_signature": "",
+        "sources": {},
+        "summary_overrides": {},
+        "editing_section": "",
+        "quiz_revealed": set(),
+        "quiz_attempts": {},
+        "learning_record": {"understood": set(), "review_later": set(), "needs_practice": set()},
+        "select_summary": True,
+        "select_quiz": False,
+        "select_reading": False,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -511,131 +589,394 @@ def init_state() -> None:
 
 
 def reset_state() -> None:
-    keys = [
-        "summary_markdown",
-        "quiz_markdown",
-        "pdf_text_preview",
-        "transcript_text_preview",
-        "quiz_items",
-        "quiz_submitted",
-        "quiz_score",
-        "quiz_feedback",
-        "active_task",
-        "bilingual_pairs",
-        "reading_markdown",
-    ]
-    for key in keys:
+    for key in list(st.session_state.keys()):
         if key in st.session_state:
             del st.session_state[key]
     init_state()
 
 
-def render_quiz_section() -> None:
-    if not st.session_state.quiz_markdown:
-        return
+def render_sidebar() -> None:
+    st.sidebar.title("Study Workspace")
+    st.sidebar.markdown("导入材料、选择学习方式，再把结果转成可复习的学习资产。")
+    st.sidebar.divider()
+    st.sidebar.markdown("**How it works**")
+    st.sidebar.markdown("1. Add slides or a transcript\n2. Confirm parsing status\n3. Choose study tools\n4. Review, practise and revisit")
+    st.sidebar.info("结果与学习标记保存在当前浏览器会话；不会上传到额外数据库。")
 
+
+def _upload_signature(files: list[object]) -> str:
+    digest = hashlib.sha256()
+    for file in files:
+        digest.update(str(getattr(file, "name", "")).encode("utf-8"))
+        digest.update(getattr(file, "getvalue")())
+    return digest.hexdigest()
+
+
+def sync_materials(pdf_files: list[object], txt_files: list[object]) -> list[ParsedMaterial]:
+    all_files = [*pdf_files, *txt_files]
+    signature = _upload_signature(all_files) if all_files else ""
+    if signature == st.session_state.material_signature:
+        return st.session_state.materials
+
+    materials: list[ParsedMaterial] = []
+    for file in pdf_files:
+        materials.append(parse_pdf_upload(file, str(file.name)))
+    for file in txt_files:
+        materials.append(parse_txt_upload(file, str(file.name)))
+    st.session_state.material_signature = signature
+    st.session_state.materials = materials
+    st.session_state.sources = source_registry(materials)
+    return materials
+
+
+def render_workspace_nav() -> None:
     st.markdown(
         """
-        <section class="section-card">
-            <div class="section-label">Practice</div>
-            <h2 class="section-title">English Quiz</h2>
+        <section class="workspace-nav">
+            <strong>Learning flow</strong><span class="nav-arrow">→</span>
+            <span>Read</span><span class="nav-arrow">→</span><span>Review</span>
+            <span class="nav-arrow">→</span><span>Quiz</span><span class="nav-arrow">→</span>
+            <span>Check mistakes</span><span class="nav-arrow">→</span><span>Review again</span>
         </section>
         """,
         unsafe_allow_html=True,
     )
 
-    if not st.session_state.quiz_items:
-        st.warning("Quiz 已生成，但暂时无法解析成交互式题目。")
-        st.download_button(
-            label="下载 Quiz Markdown（含答案）",
-            data=st.session_state.quiz_markdown,
-            file_name="course_quiz.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
+
+def render_material_card(material: ParsedMaterial) -> None:
+    class_name = ""
+    if material.status == "Warning":
+        class_name = " warning"
+    elif material.status == "Failed":
+        class_name = " failed"
+    badge_class = ""
+    if material.status == "Warning":
+        badge_class = " warning"
+    elif material.status == "Failed":
+        badge_class = " failed"
+    metadata = ["PDF slides" if material.kind == "pdf" else "TXT transcript"]
+    if material.page_count is not None:
+        metadata.append(f"{material.page_count} pages")
+    if material.char_count:
+        metadata.append(f"{material.char_count:,} characters extracted")
+    st.markdown(
+        f"""
+        <section class="material-card{class_name}">
+            <div class="status-kicker">Material</div>
+            <h3 class="material-title">{html.escape(material.name)}</h3>
+            <span class="status-badge{badge_class}">{html.escape(material.status)}</span>
+            <p class="material-meta">{' · '.join(metadata)}</p>
+            <p class="material-meta">{html.escape(material.message)}</p>
+            {f'<p class="material-meta"><strong>Note:</strong> {html.escape(material.warning)}</p>' if material.warning else ''}
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_materials(materials: list[ParsedMaterial]) -> None:
+    st.markdown("### Materials")
+    if not materials:
+        st.info("Add at least one PDF slide deck or TXT transcript to begin. You can upload multiple files of either type.")
+        return
+    for material in materials:
+        render_material_card(material)
+    if any(material.status == "Failed" for material in materials):
+        st.warning("Files that failed parsing will not be included. You can remove them and upload a readable copy without losing the other materials.")
+
+
+TOOL_CONFIG = {
+    "summary": {
+        "title": "课程总结",
+        "class_name": "summary",
+        "fit": "适合：考试复习、快速掌握整节课",
+        "output": "输出：章节结构、重点知识、核心术语、教授强调内容",
+    },
+    "quiz": {
+        "title": "Quiz",
+        "class_name": "quiz",
+        "fit": "适合：检查自己是否真正掌握",
+        "output": "输出：英文选择题、用户作答、答案解析",
+    },
+    "reading": {
+        "title": "精读翻译",
+        "class_name": "reading",
+        "fit": "适合：英文课程阅读、理解课堂原文",
+        "output": "输出：英文原文整理、中文翻译、重点表达解释",
+    },
+}
+
+
+def render_tool_picker() -> list[str]:
+    st.markdown("### Study Tools")
+    st.caption("Choose one learning mode, or combine several. Your choices only affect what will be generated - they do not change the uploaded materials.")
+    selected: list[str] = []
+    columns = st.columns(3)
+    for column, (key, config) in zip(columns, TOOL_CONFIG.items()):
+        with column:
+            st.markdown(
+                f"""
+                <section class="tool-card {config['class_name']}">
+                    <div class="tool-eyebrow">Study mode</div>
+                    <h3 class="tool-title">{config['title']}</h3>
+                    <p class="tool-copy">{config['fit']}</p>
+                    <p class="tool-output">{config['output']}</p>
+                </section>
+                """,
+                unsafe_allow_html=True,
+            )
+            if st.checkbox(f"Select {config['title']}", key=f"select_{key}"):
+                selected.append(key)
+    return selected
+
+
+def render_expectation(selected_tools: list[str], has_valid_material: bool) -> None:
+    st.markdown('<section class="expectation-panel">', unsafe_allow_html=True)
+    if not selected_tools:
+        st.markdown("**Choose a study tool to see your result plan.**")
+        st.caption("You can select one tool for a focused task, or combine tools for a complete review session.")
+    else:
+        labels = " + ".join(TOOL_CONFIG[tool]["title"] for tool in selected_tools)
+        st.markdown(f"**You selected: {labels}**")
+        st.markdown("**You will receive:**")
+        for item in expected_outputs(selected_tools):
+            st.markdown(f"- {item}")
+        if not has_valid_material:
+            st.caption("Add a readable PDF or TXT file before generating.")
+    st.markdown("</section>", unsafe_allow_html=True)
+
+
+def _run_generation(selected_tools: list[str], materials: list[ParsedMaterial], course_name: str) -> None:
+    pdf_text = combine_materials(materials, "pdf")
+    transcript_text = combine_materials(materials, "txt")
+    if not pdf_text and not transcript_text:
+        st.error("We could not find readable text in your uploads. Try a text-based PDF or a UTF-8 TXT transcript, then generate again.")
         return
 
-    with st.form("quiz_form"):
-        user_answers: list[str] = []
-        for index, item in enumerate(st.session_state.quiz_items, start=1):
-            st.markdown(f"**{index}. {item['question']}**")
-            labels = [f"{option}. {item['options'][option]}" for option in ("A", "B", "C", "D")]
-            answer = st.radio(
-                f"Select your answer for Question {index}",
-                labels,
-                index=None,
-                key=f"quiz_q_{index}",
-                label_visibility="collapsed",
-            )
-            user_answers.append(answer[0] if answer else "")
+    with st.status("Preparing your study workspace", expanded=True) as status:
+        status.write("1. Reading materials")
+        status.write("2. Confirming parsed course content")
 
-        submitted = st.form_submit_button("提交 Quiz")
+        def update_stage(stage: str) -> None:
+            status.write(f"• {stage}")
+            status.update(label=stage, state="running")
 
-    if submitted:
-        score = 0
-        feedback: list[dict] = []
-        for index, item in enumerate(st.session_state.quiz_items, start=1):
-            selected = user_answers[index - 1]
-            correct = item["answer"]
-            is_correct = selected == correct
-            if is_correct:
-                score += 1
-            feedback.append(
-                {
-                    "selected": selected,
-                    "correct": correct,
-                    "is_correct": is_correct,
-                    "item": item,
-                }
-            )
-        st.session_state.quiz_submitted = True
-        st.session_state.quiz_score = score
-        st.session_state.quiz_feedback = feedback
+        try:
+            for tool in selected_tools:
+                if tool == "summary":
+                    result = summarize_course_material(pdf_text, transcript_text, course_name, on_stage=update_stage)
+                    st.session_state.summary_markdown = result
+                    st.session_state.bilingual_pairs = parse_bilingual_pairs(result)
+                    st.session_state.summary_overrides = {}
+                elif tool == "quiz":
+                    result = generate_quiz_material(pdf_text, transcript_text, course_name, on_stage=update_stage)
+                    st.session_state.quiz_markdown = result
+                    st.session_state.quiz_items = parse_quiz_markdown(result)
+                    st.session_state.quiz_revealed = set()
+                    st.session_state.quiz_attempts = {}
+                elif tool == "reading":
+                    result = generate_reading_guide_material(pdf_text, transcript_text, course_name, on_stage=update_stage)
+                    st.session_state.reading_markdown = result
+            status.update(label="Study materials ready", state="complete", expanded=False)
+        except ValueError as exc:
+            status.update(label="Generation could not be completed", state="error")
+            st.error(f"Generation failed. Your uploaded files are still available. {exc}")
+        except Exception:  # noqa: BLE001 - detailed error stays out of the student UI
+            status.update(label="Generation could not be completed", state="error")
+            st.error("Generation failed. Your uploaded files are still available. Please try again in a moment.")
 
-    if st.session_state.quiz_submitted:
-        for index, feedback in enumerate(st.session_state.quiz_feedback, start=1):
-            item = feedback["item"]
-            selected = feedback["selected"]
-            correct = feedback["correct"]
-            is_correct = feedback["is_correct"]
-            st.markdown(f"### Question {index}")
-            if selected:
-                if is_correct:
-                    st.success(f"Your answer: {selected}  |  Correct answer: {correct}")
-                else:
-                    st.error(f"Your answer: {selected}  |  Correct answer: {correct}")
+
+def _copy_button(value: str, key: str) -> None:
+    safe_value = json.dumps(value).replace("</", "<\\/")
+    components.html(
+        f"""<button id=\"{key}\" style=\"border:1px solid #ead7cb;border-radius:10px;background:#fffaf6;color:#4a3025;padding:8px 11px;cursor:pointer;font:600 13px system-ui\">Copy</button>
+        <script>document.getElementById({json.dumps(key)}).onclick = async () => {{ await navigator.clipboard.writeText({safe_value}); document.getElementById({json.dumps(key)}).textContent = 'Copied'; }};</script>""",
+        height=42,
+    )
+
+
+def _render_source_reference(source_labels: list[str]) -> None:
+    if not source_labels:
+        return
+    labels = " · ".join(source_labels)
+    st.markdown(f'<div class="source-note"><span class="source-badge">Source</span><strong>{html.escape(labels)}</strong><p>General source context is available below. Precise pages and timestamps are not available for this result, so none are shown.</p></div>', unsafe_allow_html=True)
+    sources = st.session_state.sources
+    for source in sources.values():
+        if isinstance(source, SourceReference) and source.label in source_labels:
+            with st.expander(f"View original context · {source.label}"):
+                st.caption(source.note)
+                st.text(source.excerpt)
+
+
+def _materialize_summary() -> str:
+    sections = parse_summary_sections(st.session_state.summary_markdown, st.session_state.sources)
+    overrides = st.session_state.summary_overrides
+    parts = []
+    for index, section in enumerate(sections):
+        section_id = f"{section.key}-{index}"
+        parts.append(f"## {section.title}\n\n{overrides.get(section_id, section.markdown)}")
+    return "\n\n".join(parts).strip() or st.session_state.summary_markdown
+
+
+def render_summary_results(course_name: str) -> None:
+    if not st.session_state.summary_markdown:
+        return
+    st.markdown('<section class="section-card"><div class="section-label">Study Results</div><h2 class="section-title">课程总结</h2></section>', unsafe_allow_html=True)
+    st.caption("Each section is intentionally separated so you can read, copy or edit one study module without losing the rest of the result.")
+    sections = parse_summary_sections(st.session_state.summary_markdown, st.session_state.sources)
+    if not sections:
+        st.warning("The summary was generated, but its structure could not be recognized. You can still download the original Markdown below.")
+        st.markdown(st.session_state.summary_markdown)
+        return
+
+    for index, section in enumerate(sections):
+        section_id = f"{section.key}-{index}"
+        content = st.session_state.summary_overrides.get(section_id, section.markdown)
+        with st.container(border=True):
+            title_col, action_col = st.columns([0.65, 0.35])
+            with title_col:
+                st.markdown(f"#### {section.title}")
+                if section.source_labels:
+                    st.caption("Source: " + " · ".join(section.source_labels))
+            with action_col:
+                edit_col, regen_col, copy_col = st.columns(3)
+                with edit_col:
+                    if st.button("Edit", key=f"edit-{section_id}"):
+                        st.session_state.editing_section = section_id
+                with regen_col:
+                    if st.button("Regenerate", key=f"regen-{section_id}"):
+                        st.info("This module is ready for a future section-level API. The current generator only supports whole-course generation, so this action will not silently rerun or overwrite your other notes.")
+                with copy_col:
+                    _copy_button(content, f"copy-{section_id}")
+
+            if st.session_state.editing_section == section_id:
+                draft = st.text_area("Edit this study module", value=content, height=220, key=f"draft-{section_id}")
+                save_col, cancel_col = st.columns(2)
+                with save_col:
+                    if st.button("Save module", key=f"save-{section_id}", type="primary"):
+                        st.session_state.summary_overrides[section_id] = draft.strip()
+                        st.session_state.editing_section = ""
+                        st.rerun()
+                with cancel_col:
+                    if st.button("Cancel", key=f"cancel-{section_id}"):
+                        st.session_state.editing_section = ""
+                        st.rerun()
             else:
-                st.warning(f"You did not select an answer. Correct answer: {correct}")
+                st.markdown(content)
+            _render_source_reference(section.source_labels)
 
-            for option in ("A", "B", "C", "D"):
-                option_text = item["options"].get(option, "")
-                explanation = item["explanations"].get(option, "")
-                st.markdown(f"- **{option}. {option_text}**")
-                if explanation:
-                    st.markdown(f"  Explanation: {explanation}")
-
-        st.info(f"Quiz score: {st.session_state.quiz_score} / {len(st.session_state.quiz_items)}")
-
-    st.download_button(
-        label="下载 Quiz Markdown（含答案）",
-        data=st.session_state.quiz_markdown,
-        file_name="course_quiz.md",
-        mime="text/markdown",
-        use_container_width=True,
-    )
+    exported_summary = _materialize_summary()
+    pdf_bytes = build_summary_pdf(exported_summary, course_name or "课程总结")
+    download_col1, download_col2 = st.columns(2)
+    with download_col1:
+        st.download_button("Download Markdown", exported_summary, "course_summary.md", "text/markdown", use_container_width=True)
+    with download_col2:
+        st.download_button("Download PDF", pdf_bytes, "course_summary.pdf", "application/pdf", use_container_width=True)
 
 
-def render_sidebar() -> None:
-    st.sidebar.title("使用说明")
-    st.sidebar.markdown(
-        """
-        1. 上传 PDF 课件、TXT 字幕，或两者之一
-        2. 选择要单独触发的主功能
-        3. 填写课程名称或主题（可选）
-        4. 点击对应按钮直接生成
-        """
-    )
-    st.sidebar.info("支持仅 PDF、仅 TXT，或 PDF + TXT 融合处理。课程总结、英文 Quiz、精读翻译稿都可以单独生成。")
+def render_reading_results() -> None:
+    if not st.session_state.reading_markdown:
+        return
+    st.markdown('<section class="section-card"><div class="section-label">Reading</div><h2 class="section-title">精读翻译稿</h2></section>', unsafe_allow_html=True)
+    pairs = parse_bilingual_pairs(st.session_state.reading_markdown)
+    if not pairs:
+        st.markdown(st.session_state.reading_markdown)
+    else:
+        st.caption("Read Chinese and English in parallel. Key terminology remains in context rather than being detached into a separate translation list.")
+        for index, pair in enumerate(pairs, start=1):
+            with st.container(border=True):
+                st.caption(f"Part {index:02d} · {pair['section'] or 'Guided reading'}")
+                left, right = st.columns(2)
+                with left:
+                    st.markdown("**中文整理**")
+                    st.markdown(pair["cn"])
+                with right:
+                    st.markdown("**English**")
+                    st.markdown(pair["en"])
+        _render_source_reference([source.label for source in st.session_state.sources.values()])
+    st.download_button("Download guided reading Markdown", st.session_state.reading_markdown, "guided_translation.md", "text/markdown", use_container_width=True)
+
+
+def render_quiz_section() -> None:
+    if not st.session_state.quiz_markdown:
+        return
+    st.markdown('<section class="section-card"><div class="section-label">Practice</div><h2 class="section-title">English Quiz</h2></section>', unsafe_allow_html=True)
+    items = st.session_state.quiz_items
+    if not items:
+        st.warning("Quiz was generated, but it could not be converted into interactive questions. You can still download the complete Quiz Markdown.")
+        st.download_button("Download Quiz Markdown", st.session_state.quiz_markdown, "course_quiz.md", "text/markdown", use_container_width=True)
+        return
+
+    attempts = st.session_state.quiz_attempts
+    for index, item in enumerate(items, start=1):
+        with st.container(border=True):
+            st.markdown(f"**Question {index}** · {item['question']}")
+            options = [f"{letter}. {item['options'][letter]}" for letter in ("A", "B", "C", "D")]
+            selected = st.radio("Your answer", options, index=None, key=f"quiz-answer-{index}", label_visibility="collapsed")
+            check_col, answer_col, status_col = st.columns([0.26, 0.26, 0.48])
+            with check_col:
+                if st.button("Check", key=f"check-{index}"):
+                    if selected:
+                        attempts[index] = selected[0] == item["answer"]
+                    else:
+                        st.warning("Choose an answer before checking it.")
+            with answer_col:
+                if st.button("Show answer", key=f"reveal-{index}"):
+                    st.session_state.quiz_revealed.add(index)
+            with status_col:
+                if index in attempts:
+                    if attempts[index]:
+                        st.success("Correct - mark this concept as understood below.")
+                    else:
+                        st.error("Not quite - review the explanation and consider saving it for later.")
+            if index in st.session_state.quiz_revealed:
+                st.info(f"Answer: {item['answer']}")
+                for letter in ("A", "B", "C", "D"):
+                    explanation = item["explanations"].get(letter, "Explanation was not returned for this option.")
+                    st.markdown(f"- **{letter}.** {explanation}")
+    if attempts:
+        score = sum(attempts.values())
+        st.caption(f"Checked answers: {score} correct out of {len(attempts)} attempted.")
+    _render_source_reference([source.label for source in st.session_state.sources.values()])
+    st.download_button("Download Quiz Markdown", st.session_state.quiz_markdown, "course_quiz.md", "text/markdown", use_container_width=True)
+
+
+def render_learning_loop() -> None:
+    if not any((st.session_state.summary_markdown, st.session_state.quiz_markdown, st.session_state.reading_markdown)):
+        return
+    st.markdown('<section class="section-card"><div class="section-label">Learning Loop</div><h2 class="section-title">Keep the next review visible</h2></section>', unsafe_allow_html=True)
+    st.markdown('<section class="study-loop"><span class="study-step">Read</span><span class="study-step">Review</span><span class="study-step">Quiz</span><span class="study-step">Check mistakes</span><span class="study-step">Review again</span></section>', unsafe_allow_html=True)
+    st.caption("These lightweight study markers are stored only in this session. The state shape is ready for future mastery, spaced-repetition and cross-lecture features.")
+    record = st.session_state.learning_record
+    left, middle, right = st.columns(3)
+    with left:
+        if st.button("Mark as understood", use_container_width=True):
+            record["understood"].add("current_lecture")
+            record["review_later"].discard("current_lecture")
+            record["needs_practice"].discard("current_lecture")
+    with middle:
+        if st.button("Review later", use_container_width=True):
+            record["review_later"].add("current_lecture")
+            record["understood"].discard("current_lecture")
+    with right:
+        if st.button("Need more practice", use_container_width=True):
+            record["needs_practice"].add("current_lecture")
+            record["understood"].discard("current_lecture")
+    if "current_lecture" in record["understood"]:
+        st.success("Marked as understood for this session.")
+    elif "current_lecture" in record["needs_practice"]:
+        st.warning("Saved as needing more practice. Revisit the Quiz or regenerate a targeted set when module-level generation becomes available.")
+    elif "current_lecture" in record["review_later"]:
+        st.info("Saved for later review in this session.")
+
+
+def render_debug_previews() -> None:
+    if st.session_state.pdf_text_preview:
+        with st.expander("Parsed slide text preview"):
+            st.text_area("PDF text", st.session_state.pdf_text_preview[:5000], height=240, disabled=True)
+    if st.session_state.transcript_text_preview:
+        with st.expander("Parsed transcript preview"):
+            st.text_area("Transcript text", st.session_state.transcript_text_preview[:5000], height=240, disabled=True)
 
 
 def main() -> None:
@@ -643,187 +984,42 @@ def main() -> None:
     render_theme()
     render_sidebar()
     render_header()
+    render_workspace_nav()
     render_composer_intro()
 
-    st.markdown('<section class="workbench-shell">', unsafe_allow_html=True)
     st.markdown('<section class="input-stage">', unsafe_allow_html=True)
     upload_col1, upload_col2 = st.columns(2)
     with upload_col1:
-        pdf_file = st.file_uploader("上传 PDF 课件", type=["pdf"])
+        pdf_files = st.file_uploader("Add PDF slides", type=["pdf"], accept_multiple_files=True, help="Text-based PDFs work best. Scanned PDFs may be usable but can contain little extractable text.")
     with upload_col2:
-        txt_file = st.file_uploader("上传 TXT 字幕", type=["txt"])
-    course_name = st.text_input("课程名称 / 本次主题（可选）", placeholder="例如：Project Management - Stakeholder Analysis")
+        txt_files = st.file_uploader("Add TXT transcripts", type=["txt"], accept_multiple_files=True, help="UTF-8, UTF-8 with BOM, GB18030 and Big5 are supported.")
+    course_name = st.text_input("Course name / lecture topic (optional)", placeholder="e.g. Project Management - Stakeholder Analysis")
     st.markdown("</section>", unsafe_allow_html=True)
+    materials = sync_materials(pdf_files, txt_files)
+    render_materials(materials)
+    valid_materials = [material for material in materials if material.text]
+    if valid_materials:
+        st.session_state.pdf_text_preview = combine_materials(materials, "pdf")
+        st.session_state.transcript_text_preview = combine_materials(materials, "txt")
 
-    render_action_stage()
-    st.markdown('<div class="action-toolbar">', unsafe_allow_html=True)
-    summary_clicked = st.button("生成课程总结", type="primary", use_container_width=True)
-    quiz_clicked = st.button("生成英文 Quiz", use_container_width=True)
-    reading_clicked = st.button("生成精读翻译稿", use_container_width=True)
-    reset_clicked = st.button("重置页面", use_container_width=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown(
-        '<p class="toolbar-note">上传完材料后，直接点击你需要的那个功能即可。三个功能彼此独立，生成后也会分别保留，不会互相覆盖。</p>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("</section>", unsafe_allow_html=True)
-
-    if summary_clicked:
-        st.session_state.active_task = "summary"
-    elif quiz_clicked:
-        st.session_state.active_task = "quiz"
-    elif reading_clicked:
-        st.session_state.active_task = "reading"
-
+    selected_tools = render_tool_picker()
+    render_expectation(selected_tools, bool(valid_materials))
+    action_col, reset_col = st.columns([0.76, 0.24])
+    with action_col:
+        generate_clicked = st.button("Generate selected study materials", type="primary", use_container_width=True, disabled=not selected_tools or not valid_materials)
+    with reset_col:
+        reset_clicked = st.button("Reset workspace", use_container_width=True)
     if reset_clicked:
         reset_state()
         st.rerun()
+    if generate_clicked:
+        _run_generation(selected_tools, materials, course_name.strip())
 
-    if st.session_state.active_task:
-        active_task = st.session_state.active_task
-        st.session_state.active_task = ""
-        if not pdf_file and not txt_file:
-            st.error("请至少上传一个 PDF 课件或 TXT 字幕文件。")
-            return
-
-        task_label = {
-            "summary": "课程总结",
-            "quiz": "英文 Quiz",
-            "reading": "精读翻译稿",
-        }.get(active_task, "内容")
-
-        with st.spinner(f"正在提取内容并生成{task_label}..."):
-            try:
-                pdf_text = extract_pdf_text(pdf_file) if pdf_file else ""
-                transcript_text = read_txt_file(txt_file) if txt_file else ""
-                st.session_state.pdf_text_preview = pdf_text
-                st.session_state.transcript_text_preview = transcript_text
-
-                if active_task == "summary":
-                    summary = summarize_course_material(
-                        pdf_text=pdf_text,
-                        transcript_text=transcript_text,
-                        course_name=course_name.strip(),
-                    )
-                    st.session_state.summary_markdown = summary
-                    st.session_state.bilingual_pairs = parse_bilingual_pairs(summary)
-
-                elif active_task == "quiz":
-                    quiz_markdown = generate_quiz_material(
-                        pdf_text=pdf_text,
-                        transcript_text=transcript_text,
-                        course_name=course_name.strip(),
-                    )
-                    st.session_state.quiz_markdown = quiz_markdown
-                    st.session_state.quiz_items = parse_quiz_markdown(quiz_markdown)
-                    st.session_state.quiz_submitted = False
-                    st.session_state.quiz_score = 0
-                    st.session_state.quiz_feedback = []
-
-                elif active_task == "reading":
-                    reading_markdown = generate_reading_guide_material(
-                        pdf_text=pdf_text,
-                        transcript_text=transcript_text,
-                        course_name=course_name.strip(),
-                    )
-                    st.session_state.reading_markdown = reading_markdown
-            except ValueError as exc:
-                st.error(str(exc))
-                return
-            except Exception as exc:  # noqa: BLE001
-                st.error(f"生成{task_label}时发生未预期错误，请稍后重试。")
-                st.exception(exc)
-                return
-
-        st.success(f"{task_label}生成完成。")
-
-    if st.session_state.summary_markdown:
-        st.markdown(
-            """
-            <section class="section-card">
-                <div class="section-label">Summary</div>
-                <h2 class="section-title">课程总结</h2>
-            </section>
-            """,
-            unsafe_allow_html=True,
-        )
-        tab1, tab2 = st.tabs(["讲义版", "中英对照版"])
-        with tab1:
-            st.markdown('<section class="result-frame">', unsafe_allow_html=True)
-            st.markdown(st.session_state.summary_markdown)
-            st.markdown("</section>", unsafe_allow_html=True)
-
-        with tab2:
-            st.info("原生 Streamlit 不支持逐句选中后自动联动高亮；这里提供按条编号的中英对照视图，方便你快速对应。")
-            if not st.session_state.bilingual_pairs:
-                st.warning("当前总结暂时无法解析为中英对照条目。")
-            else:
-                for idx, item in enumerate(st.session_state.bilingual_pairs, start=1):
-                    st.markdown(
-                        f"""
-                        <section class="result-frame">
-                            <div class="section-label">{item['section']}</div>
-                            <h3>{idx:02d}. {item['module'] or 'Bilingual Note'}</h3>
-                            <p><strong>中文</strong><br>{item['cn']}</p>
-                            <p><strong>English</strong><br>{item['en']}</p>
-                        </section>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-
-        pdf_bytes = build_summary_pdf(
-            summary_markdown=st.session_state.summary_markdown,
-            course_name=course_name.strip() or "课程总结",
-        )
-
-        download_col1, download_col2 = st.columns(2)
-        with download_col1:
-            st.download_button(
-                label="下载 Markdown",
-                data=st.session_state.summary_markdown,
-                file_name="course_summary.md",
-                mime="text/markdown",
-                use_container_width=True,
-            )
-        with download_col2:
-            st.download_button(
-                label="下载 PDF",
-                data=pdf_bytes,
-                file_name="course_summary.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-            )
-
-    if st.session_state.reading_markdown:
-        st.markdown(
-            """
-            <section class="section-card">
-                <div class="section-label">Reading</div>
-                <h2 class="section-title">精读翻译稿</h2>
-            </section>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown('<section class="result-frame">', unsafe_allow_html=True)
-        st.markdown(st.session_state.reading_markdown)
-        st.markdown("</section>", unsafe_allow_html=True)
-        st.download_button(
-            label="下载精读翻译 Markdown",
-            data=st.session_state.reading_markdown,
-            file_name="guided_translation.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
-
+    render_learning_loop()
+    render_summary_results(course_name.strip())
+    render_reading_results()
     render_quiz_section()
-
-    if st.session_state.pdf_text_preview:
-        with st.expander("提取到的课件文本预览"):
-            st.text_area("PDF 内容", st.session_state.pdf_text_preview[:5000], height=240)
-
-    if st.session_state.transcript_text_preview:
-        with st.expander("提取到的字幕文本预览"):
-            st.text_area("TXT 内容", st.session_state.transcript_text_preview[:5000], height=240)
+    render_debug_previews()
 
 
 if __name__ == "__main__":

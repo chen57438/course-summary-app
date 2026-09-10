@@ -25,7 +25,7 @@ def build_summary_prompt(
 4. 【字幕主题梳理】: {topic_map_section} (这是根据字幕内容抽出的主题线索)
 
 # Task
-请根据已提供的材料生成总结：如果同时有课件和讲稿，就做融合总结；如果只提供其中一种材料，就基于该材料独立总结核心知识点。你的目标是让学生即便没看视频，也能掌握本节课的核心知识。
+请根据已提供的材料生成总结：如果同时有课件和讲稿，就做有层次的融合总结；如果只提供其中一种材料，就基于该材料独立总结核心知识点。你的目标是让学生即便没看视频，也能掌握本节课的核心知识。
 请把输出写成“高质量课程讲义式备考笔记”，而不是简短摘要。
 
 # Constraint & Style (极其重要)
@@ -37,9 +37,10 @@ def build_summary_prompt(
    - 非专业词汇直接用中文，保持阅读流畅，不要全篇中英夹杂。
 3. 结构化输出：使用 Markdown 标题、列表和表格，增加可读性。
 4. 请优先整合：
-   - 课件中的定义、框架、流程、视觉重点
-   - 教授在字幕中补充的解释、案例、提醒、考试导向
-5. 如果课件与讲稿信息存在补充、细化或轻微差异，请显式指出，不要简单重复。
+   - 先以课件中的定义、框架、流程与视觉重点建立课程结构
+   - 再用字幕补充教授解释、案例、提醒，以及课件没有展开的细节
+   - 不要把两份材料简单拼接或重复改写；同一概念先说明课件骨架，再只写字幕新增信息
+5. 如果课件与讲稿信息存在补充、细化或轻微差异，请在相关模块中清楚区分“课件内容”和“课堂补充”，不要简单重复。
 6. 避免输出空泛结论；每个模块都要尽量体现“概念是什么、为什么重要、如何应用”。
 7. “核心知识点”部分必须充分展开，不要只写简短提纲。
 8. 对每个核心模块，尽量覆盖：
@@ -53,8 +54,8 @@ def build_summary_prompt(
    - 每个模块先给出结论性标题
    - 再展开解释
    - 再补教授案例、提醒或类比
-12. 优先保留教授在讲稿里对概念的口头解释，因为这通常比课件标题更有学习价值。
-13. 如果课件只是列提纲，而教授补充了具体情境、案例或误区，请优先写教授补充内容。
+12. 只有当字幕中有明确依据（例如重复强调、提醒、对比、举例、或直接说明考试/作业）时，才可写成教授强调或课堂案例；不能把模型推测写成教授观点。
+13. 如果课件只是列提纲，而教授补充了具体情境、案例或误区，请在保留课件结构的前提下，补充这些课堂信息。
 14. 如果只提供一种材料，不要提及缺失材料，也不要假装引用另一种材料。
 15. 如果输入材料是纯中文，请保持总结自然、准确、流畅，不要为了形式强行制造英文术语。
 16. 请面向“做 quiz 备考”来写，重点补足以下信息：
@@ -73,59 +74,34 @@ def build_summary_prompt(
    - 教授特别强调的误区、应用与提醒
 
 # Output Schema
-请严格按以下结构输出：
+请严格按下列二级标题输出，方便学习工作台拆分为可单独阅读、编辑和复习的模块。没有足够材料支撑时请简短说明，不要编造。
 
-## 📌 课程概览 (Executive Summary)
-- CN: [中文总结句子]
-- EN: [对应英文翻译]
-- CN: [中文总结句子]
-- EN: [对应英文翻译]
+## Overview
+本节课的核心主题、解决的问题与一段简洁中文概览。
 
-## 💡 核心知识点 (Key Knowledge Points)
-[按逻辑模块排列，结合课件的结构和教授的解释]
-### 模块名称（中文） / Module Name (English)
-- CN: [中文解释或知识点]
-- EN: [对应英文翻译]
-- CN: [中文解释或知识点]
-- EN: [对应英文翻译]
-- CN: [中文解释或知识点]
-- EN: [对应英文翻译]
-- CN: [中文解释或知识点]
-- EN: [对应英文翻译]
+## Learning Objectives
+列出学生完成本节后应能理解、比较或应用的 3-5 项能力。
 
-## 🎓 教授的“金句”与强调 (Professor's Insights)
-[提取讲稿中教授反复强调、课件上可能没有的实战经验、考试提醒或逻辑洞察]
-- CN: [中文提醒]
-- EN: [对应英文翻译]
-- CN: [中文提醒]
-- EN: [对应英文翻译]
+## Key Concepts
+按逻辑模块展开核心概念。每个模块用三级标题；用中文解释“是什么、为什么重要、如何应用”，并在有可靠原文时保留关键英文术语（中文）。
 
-## 📋 专业词汇表 (Bilingual Glossary)
-| 英文术语 | 中文翻译 | 上下文含义简述 |
-| :--- | :--- | :--- |
-| (例) Work Breakdown Structure | 工作分解结构 | 将项目团队工作分解为较小、更易管理的部分 |
+## Key Terms
+用 Markdown 表格列出真正关键、重复出现或容易考核的英文术语、中文翻译及简短上下文解释。
 
-## 📝 Quiz 备考提示 (Quiz Preparation Notes)
-[用来帮助学生准备单选题，不是直接出题，而是总结高频考法]
-### 高频定义题 / Definition Triggers
-- CN: [中文备考提示]
-- EN: [对应英文翻译]
-### 概念辨析题 / Distinction Triggers
-- CN: [中文备考提示]
-- EN: [对应英文翻译]
-### 场景判断题 / Scenario Clues
-- CN: [中文备考提示]
-- EN: [对应英文翻译]
-### 常见错项陷阱 / Distractor Traps
-- CN: [中文备考提示]
-- EN: [对应英文翻译]
+## Lecture Highlights
+简要说明课件与字幕各自为本节课补充了什么，以及学生阅读时应如何把两者结合。若只上传一种材料，只概括该材料的学习脉络。
 
-## 🧩 课件与讲稿补充点 (Slides vs. Transcript Additions)
-[说明哪些点主要来自课件，哪些点主要来自教授口述，哪些是两者互补后的结论]
-- CN: [中文补充点]
-- EN: [对应英文翻译]
-- CN: [中文补充点]
-- EN: [对应英文翻译]
+## Professor Emphasis
+只收录课堂字幕中可明确识别的教授强调、提醒、误区或对比。每一点应说明为何值得注意。若未提供字幕、或没有明确证据，请如实说明，不要虚构教授观点。
+
+## Examples from Lecture
+只收录上传材料中实际出现的案例、情境或类比，并说明它说明了什么概念。没有可核实案例时请如实说明，不要自行补造示例。
+
+## Possible Exam Focus
+仅列出材料中明确提到 quiz、assessment、exam、作业要求，或由反复定义/对比而具有直接复习价值的知识点。不要把模型自己的猜测表述成“教授说会考”；措辞使用“值得复习”而非不确定的考试承诺。
+
+## Key Takeaways
+说明课件与字幕如何互补，并用 3-5 条可立即复习的结论收束。若只有一种材料，明确这是基于已上传材料的结论即可。
 
 # Additional Notes
 - 如果课程名称可推断，请自然融入总结开头；如果无法判断，则不要编造。
@@ -153,11 +129,11 @@ def build_quiz_prompt(pdf_text: str, transcript_text: str, course_name: str = ""
 You are an experienced university teaching assistant in project management. Your task is to create a high-quality multiple-choice quiz in English based on the lecture slides and lecture transcript.
 
 # Input Data
-1. Slides content: {pdf_section}
-2. Transcript content: {transcript_section}
+1. Slides content: {pdf_section} (use this as the course structure, definitions, frameworks and process reference)
+2. Transcript content: {transcript_section} (use this only to supplement the slides with spoken explanations, examples, clarifications and explicitly stated emphasis)
 
 # Task
-Create an English-only single-choice quiz that helps students review the lecture. If both sources are provided, combine them. If only one source is provided, generate the quiz based only on that source.
+Create an English-only single-choice quiz that helps students review the lecture. If both sources are provided, first anchor each question in the slide framework, then use transcript-only detail only when it genuinely adds an explanation, example or clarification. Do not create duplicate questions by rephrasing the same material from both inputs. If only one source is provided, generate the quiz based only on that source.
 
 # Requirements
 1. The entire quiz must be in English.
@@ -188,6 +164,8 @@ Create an English-only single-choice quiz that helps students review the lecture
 12. Distractors should be plausible and academically meaningful, not obviously wrong.
 13. Avoid making every question purely factual; mix direct concept checks with light scenario-based application.
 14. However, scenarios must still clearly test lecture knowledge points rather than broad common sense.
+15. Do not claim that something was "emphasized by the professor" or "will be examined" unless the uploaded transcript explicitly says so.
+16. Every explanation must explain why the correct option fits the uploaded material and why each distractor does not; do not use generic textbook explanations that are unsupported by the lecture.
 
 # Output Format
 Return the quiz in Markdown using exactly this structure:
@@ -240,7 +218,7 @@ def build_reading_prompt(pdf_text: str, transcript_text: str, course_name: str =
 
 # Task
 请根据已提供的材料生成一份“精读翻译稿”：
-- 如果同时提供 PDF 和 TXT，请优先按原始教学顺序整合内容，保留主要细节。
+- 如果同时提供 PDF 和 TXT，请以课件结构作为阅读主线，再在对应位置补入字幕的解释、案例和提醒；不要把两份材料机械拼接。
 - 如果只提供其中一种材料，请基于该材料独立生成精读翻译稿。
 - 目标不是高度总结，而是帮助学生相对完整地读懂材料内容。
 

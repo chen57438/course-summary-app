@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -11,7 +14,10 @@ from src.parser import build_transcript_study_view, normalize_study_text
 from src.prompts import build_quiz_prompt, build_reading_chunk_prompt, build_summary_prompt
 
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
+DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash"
+DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 MAX_PDF_CHARS = 22000
 MAX_TRANSCRIPT_CHARS = 32000
 READING_MAX_PDF_CHARS = 50000
@@ -21,35 +27,70 @@ READING_MAX_CHUNKS = 8
 REQUEST_TIMEOUT_SECONDS = 60
 
 
-def _get_api_key() -> str:
-    secret_key = ""
+@dataclass(frozen=True)
+class ProviderClient:
+    provider: str
+    model_name: str
+    client: Any
+
+    @property
+    def display_name(self) -> str:
+        return {"gemini": "Gemini", "openai": "OpenAI", "deepseek": "DeepSeek"}[self.provider]
+
+
+def _setting(name: str) -> str:
+    """Read a secret first, then allow a local .env value without exposing it."""
+    secret_value = ""
     try:
-        secret_key = str(st.secrets.get("GOOGLE_API_KEY", "")).strip()
+        secret_value = str(st.secrets.get(name, "")).strip()
     except Exception:  # noqa: BLE001
-        secret_key = ""
+        secret_value = ""
+    return secret_value or os.getenv(name, "").strip()
 
-    env_key = os.getenv("GOOGLE_API_KEY", "").strip()
-    api_key = secret_key or env_key
 
+def _get_provider() -> str:
+    provider = (_setting("AI_PROVIDER") or "gemini").lower()
+    if provider not in {"gemini", "openai", "deepseek"}:
+        raise ValueError("AI_PROVIDER must be one of: gemini, openai, or deepseek.")
+    return provider
+
+
+def _get_api_key(provider: str) -> str:
+    key_name = {
+        "gemini": "GOOGLE_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "deepseek": "DEEPSEEK_API_KEY",
+    }[provider]
+    api_key = _setting(key_name)
     if not api_key:
         raise ValueError(
-            "未检测到 GOOGLE_API_KEY。"
-            "本地运行请在 .env 中配置；部署到 Streamlit Community Cloud 请在 Secrets 中配置。"
+            f"未检测到 {key_name}。本地运行请在 .env 中配置；"
+            "部署到 Streamlit Community Cloud 请在 Secrets 中配置。"
         )
-
     return api_key
 
 
-def _configure_client() -> str:
+def _configure_client() -> ProviderClient:
     load_dotenv()
-    api_key = _get_api_key()
-    genai.configure(api_key=api_key)
-    return api_key
+    provider = _get_provider()
+    api_key = _get_api_key(provider)
 
+    if provider == "gemini":
+        model_name = _setting("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+        genai.configure(api_key=api_key)
+        return ProviderClient(provider, model_name, genai.GenerativeModel(model_name))
 
-def _get_model() -> genai.GenerativeModel:
-    model_name = os.getenv("GEMINI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    return genai.GenerativeModel(model_name)
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise ValueError("OpenAI-compatible provider is not installed. Run pip install -r requirements.txt.") from exc
+
+    if provider == "deepseek":
+        model_name = _setting("DEEPSEEK_MODEL") or DEFAULT_DEEPSEEK_MODEL
+        return ProviderClient(provider, model_name, OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL))
+
+    model_name = _setting("OPENAI_MODEL") or DEFAULT_OPENAI_MODEL
+    return ProviderClient(provider, model_name, OpenAI(api_key=api_key))
 
 
 def _clip_text(text: str, limit: int) -> str:
@@ -59,9 +100,39 @@ def _clip_text(text: str, limit: int) -> str:
     return normalized[:limit] + "\n\n[内容过长，已截断以适配配额限制。]"
 
 
-def _generate_text(model: genai.GenerativeModel, prompt: str) -> str:
+def _read_openai_compatible_response(provider: ProviderClient, prompt: str, max_output_tokens: int) -> str:
     try:
-        response = model.generate_content(
+        response = provider.client.chat.completions.create(
+            model=provider.model_name,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            max_tokens=max_output_tokens,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+    except Exception as exc:  # API SDKs surface many provider-specific exception types
+        raise ValueError(
+            f"{provider.display_name} could not complete the request. "
+            "Check the API key, available balance and model setting, then try again."
+        ) from exc
+
+    choices = getattr(response, "choices", [])
+    content = getattr(choices[0].message, "content", "") if choices else ""
+    if not content or not content.strip():
+        raise ValueError(f"{provider.display_name} did not return usable content. Please try again.")
+    return content.strip()
+
+
+def _generate_text(
+    provider: ProviderClient,
+    prompt: str,
+    on_stage: Callable[[str], None] | None = None,
+) -> str:
+    if on_stage:
+        on_stage("Generating study materials")
+    if provider.provider != "gemini":
+        return _read_openai_compatible_response(provider, prompt, max_output_tokens=4096)
+    try:
+        response = provider.client.generate_content(
             prompt,
             generation_config={
                 "temperature": 0.2,
@@ -86,12 +157,17 @@ def _generate_text(model: genai.GenerativeModel, prompt: str) -> str:
 
 
 def _generate_text_with_limit(
-    model: genai.GenerativeModel,
+    provider: ProviderClient,
     prompt: str,
     max_output_tokens: int,
+    on_stage: Callable[[str], None] | None = None,
 ) -> str:
+    if on_stage:
+        on_stage("Generating study materials")
+    if provider.provider != "gemini":
+        return _read_openai_compatible_response(provider, prompt, max_output_tokens=max_output_tokens)
     try:
-        response = model.generate_content(
+        response = provider.client.generate_content(
             prompt,
             generation_config={
                 "temperature": 0.2,
@@ -165,12 +241,14 @@ def summarize_course_material(
     pdf_text: str,
     transcript_text: str,
     course_name: str = "",
+    on_stage: Callable[[str], None] | None = None,
 ) -> str:
     if not pdf_text.strip() and not transcript_text.strip():
         raise ValueError("请至少上传一个 PDF 课件或 TXT 字幕文件。")
 
-    _configure_client()
-    model = _get_model()
+    if on_stage:
+        on_stage("Organizing knowledge")
+    provider = _configure_client()
     clipped_pdf_text = _clip_text(normalize_study_text(pdf_text), MAX_PDF_CHARS)
     cleaned_transcript, transcript_topic_map = build_transcript_study_view(transcript_text)
     transcript_input = cleaned_transcript or transcript_text
@@ -183,19 +261,24 @@ def summarize_course_material(
         transcript_topic_map=transcript_topic_map,
     )
 
-    return _generate_text(model, prompt)
+    result = _generate_text(provider, prompt, on_stage=on_stage)
+    if on_stage:
+        on_stage("Finalizing results")
+    return result
 
 
 def generate_quiz_material(
     pdf_text: str,
     transcript_text: str,
     course_name: str = "",
+    on_stage: Callable[[str], None] | None = None,
 ) -> str:
     if not pdf_text.strip() and not transcript_text.strip():
         raise ValueError("请至少上传一个 PDF 课件或 TXT 字幕文件来生成 quiz。")
 
-    _configure_client()
-    model = _get_model()
+    if on_stage:
+        on_stage("Organizing knowledge")
+    provider = _configure_client()
     clipped_pdf_text = _clip_text(pdf_text, MAX_PDF_CHARS)
     clipped_transcript_text = _clip_text(transcript_text, MAX_TRANSCRIPT_CHARS)
     prompt = build_quiz_prompt(
@@ -204,19 +287,24 @@ def generate_quiz_material(
         course_name=course_name,
     )
 
-    return _generate_text(model, prompt)
+    result = _generate_text(provider, prompt, on_stage=on_stage)
+    if on_stage:
+        on_stage("Finalizing results")
+    return result
 
 
 def generate_reading_guide_material(
     pdf_text: str,
     transcript_text: str,
     course_name: str = "",
+    on_stage: Callable[[str], None] | None = None,
 ) -> str:
     if not pdf_text.strip() and not transcript_text.strip():
         raise ValueError("请至少上传一个 PDF 课件或 TXT 字幕文件来生成精读翻译稿。")
 
-    _configure_client()
-    model = _get_model()
+    if on_stage:
+        on_stage("Organizing knowledge")
+    provider = _configure_client()
     clipped_pdf_text = _clip_text(pdf_text, READING_MAX_PDF_CHARS)
     clipped_transcript_text = _clip_text(transcript_text, READING_MAX_TRANSCRIPT_CHARS)
 
@@ -258,13 +346,17 @@ def generate_reading_guide_material(
     parts: list[str] = []
     total_chunks = len(chunks)
     for index, chunk in enumerate(chunks, start=1):
+        if on_stage:
+            on_stage(f"Generating study materials - reading part {index} of {total_chunks}")
         chunk_prompt = build_reading_chunk_prompt(
             chunk_text=chunk,
             chunk_index=index,
             total_chunks=total_chunks,
             course_name=course_name,
         )
-        part_text = _generate_text_with_limit(model, chunk_prompt, max_output_tokens=2048)
+        part_text = _generate_text_with_limit(provider, chunk_prompt, max_output_tokens=2048)
         parts.append(part_text.strip())
 
+    if on_stage:
+        on_stage("Finalizing results")
     return "\n\n".join([intro_text.strip(), *parts]).strip()
