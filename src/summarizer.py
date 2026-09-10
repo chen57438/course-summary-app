@@ -24,8 +24,11 @@ MAX_PDF_CHARS = 22000
 # The study view is chronological and coverage-first. Keep a sufficiently
 # generous budget so a long lecture does not silently become just its opening.
 MAX_TRANSCRIPT_CHARS = 52000
-READING_MAX_PDF_CHARS = 50000
-READING_MAX_TRANSCRIPT_CHARS = 80000
+# Reading is generated in small source-aware windows. Keep the complete local
+# material before choosing those windows, otherwise the end of a long lecture
+# can never be selected for a reading draft.
+READING_MAX_PDF_CHARS = 120000
+READING_MAX_TRANSCRIPT_CHARS = 160000
 READING_CHUNK_CHARS = 7000
 READING_MAX_CHUNKS = 8
 REQUEST_TIMEOUT_SECONDS = 60
@@ -310,6 +313,48 @@ def _split_text_into_chunks(text: str, max_chars: int, max_chunks: int) -> list[
     return chunks[:max_chunks]
 
 
+def _select_coverage_windows(text: str, max_chars: int, slots: int, source_label: str) -> list[str]:
+    """Return chronological windows spanning a source's beginning, middle and end.
+
+    Each model request stays small, but a long transcript is not reduced to
+    only its first few chunks. Source labels are attached to actual content,
+    never emitted as a standalone request.
+    """
+    normalized = " ".join(text.split()).strip()
+    if not normalized or slots <= 0:
+        return []
+    if len(normalized) <= max_chars:
+        return [f"[{source_label}]\n{normalized}"]
+
+    available_range = len(normalized) - max_chars
+    starts = [round(available_range * index / max(slots - 1, 1)) for index in range(slots)]
+    windows: list[str] = []
+    for index, start in enumerate(starts, start=1):
+        segment = normalized[start : start + max_chars].strip()
+        if segment:
+            windows.append(f"[{source_label} · 覆盖片段 {index}/{slots}]\n{segment}")
+    return windows
+
+
+def _allocate_reading_slots(source_lengths: list[int], max_chunks: int) -> list[int]:
+    """Allocate a bounded number of reading windows across non-empty sources."""
+    active = [index for index, length in enumerate(source_lengths) if length > 0]
+    if not active:
+        return [0 for _ in source_lengths]
+
+    slots = [0 for _ in source_lengths]
+    # Every provided source deserves at least one visible reading window.
+    for index in active[:max_chunks]:
+        slots[index] = 1
+    remaining = max_chunks - sum(slots)
+    total_length = sum(source_lengths[index] for index in active)
+    while remaining > 0 and total_length:
+        target = max(active, key=lambda index: source_lengths[index] / max(slots[index], 1))
+        slots[target] += 1
+        remaining -= 1
+    return slots
+
+
 def summarize_course_material(
     pdf_text: str,
     transcript_text: str,
@@ -389,25 +434,14 @@ def generate_reading_guide_material(
     clipped_pdf_text = _clip_text(pdf_text, READING_MAX_PDF_CHARS)
     clipped_transcript_text = _clip_text(transcript_text, READING_MAX_TRANSCRIPT_CHARS)
 
-    if clipped_pdf_text and clipped_transcript_text:
-        combined_text = (
-            "[课件内容]\n"
-            f"{clipped_pdf_text}\n\n"
-            "[讲稿字幕]\n"
-            f"{clipped_transcript_text}"
-        )
-    elif clipped_pdf_text:
-        combined_text = f"[课件内容]\n{clipped_pdf_text}"
-    else:
-        combined_text = f"[讲稿字幕]\n{clipped_transcript_text}"
-    if visual_context.strip():
-        combined_text += f"\n\n[课件图片视觉说明]\n{visual_context}"
-
-    chunks = _split_text_into_chunks(
-        combined_text,
-        max_chars=READING_CHUNK_CHARS,
-        max_chunks=READING_MAX_CHUNKS,
-    )
+    source_texts = [clipped_pdf_text, clipped_transcript_text]
+    slots = _allocate_reading_slots([len(text) for text in source_texts], READING_MAX_CHUNKS)
+    chunks = [
+        * _select_coverage_windows(clipped_pdf_text, READING_CHUNK_CHARS, slots[0], "课件内容"),
+        * _select_coverage_windows(clipped_transcript_text, READING_CHUNK_CHARS, slots[1], "讲稿字幕"),
+    ]
+    if visual_context.strip() and not chunks:
+        chunks = _select_coverage_windows(visual_context, READING_CHUNK_CHARS, READING_MAX_CHUNKS, "课件图片视觉说明")
     if not chunks:
         raise ValueError("无法生成精读翻译稿：输入内容为空。")
 
@@ -420,10 +454,8 @@ def generate_reading_guide_material(
 
     intro_text = (
         "## 📘 精读导览 (Reading Guide)\n"
-        f"- CN: 本精读翻译稿基于{source_label}生成，目标是尽量按原始讲授顺序保留定义、案例、解释与提醒，帮助你更完整地读懂课程内容。\n"
-        "- EN: This guided reading draft is generated from the provided course materials and aims to preserve definitions, examples, explanations, and instructor emphasis in a more complete reading flow.\n"
-        "- CN: 为了覆盖更多内容，正文按多个 Part 顺序展开；每条先给中文整理，再给对应英文，便于边读边对照。\n"
-        "- EN: To cover more of the source material, the main body is organized into multiple parts, with each note presented in Chinese first and English second for side-by-side reading.\n"
+        f"本精读翻译稿基于{source_label}生成，保留定义、案例、解释与提醒。\n\n"
+        "为避免长材料只覆盖开头，正文从课件与字幕中按首、中、末的课程跨度选取连续片段；每个 Part 内保持该来源的原始顺序。\n"
     )
 
     parts: list[str] = []

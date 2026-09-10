@@ -891,17 +891,22 @@ def render_reading_results() -> None:
     if not pairs:
         st.markdown(st.session_state.reading_markdown)
     else:
-        st.caption("中英文对照阅读，核心术语会保留在原本的上下文中。")
-        for index, pair in enumerate(pairs, start=1):
-            with st.container(border=True):
-                st.caption(f"第 {index:02d} 部分 · {pair['section'] or '精读内容'}")
-                left, right = st.columns(2)
-                with left:
-                    st.markdown("**中文整理**")
-                    st.markdown(pair["cn"])
-                with right:
-                    st.markdown("**English**")
-                    st.markdown(pair["en"])
+        st.caption("中英文对照阅读，核心术语会保留在原本的上下文中。每个 Part 是一段连续材料，不会把每一条中英对照误显示成独立章节。")
+        grouped_pairs: dict[str, list[dict[str, str]]] = {}
+        for pair in pairs:
+            group_name = pair["module"] or pair["section"] or "精读内容"
+            grouped_pairs.setdefault(group_name, []).append(pair)
+        for index, (group_name, group) in enumerate(grouped_pairs.items(), start=1):
+            with st.expander(f"第 {index:02d} 部分 · {group_name}", expanded=index == 1):
+                for pair in group:
+                    with st.container(border=True):
+                        left, right = st.columns(2)
+                        with left:
+                            st.markdown("**中文整理**")
+                            st.markdown(pair["cn"])
+                        with right:
+                            st.markdown("**English**")
+                            st.markdown(pair["en"])
         _render_source_reference([source.label for source in st.session_state.sources.values()])
     st.download_button("下载精读翻译 Markdown", st.session_state.reading_markdown, "精读翻译稿.md", "text/markdown", use_container_width=True)
 
