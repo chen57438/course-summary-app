@@ -678,7 +678,7 @@ def render_material_card(material: ParsedMaterial) -> None:
 
 
 def render_materials(materials: list[ParsedMaterial]) -> None:
-    st.markdown("### Materials")
+    st.markdown("### 材料")
     if not materials:
         st.info("请先上传至少一份 PDF 课件或 TXT 课堂字幕。两种材料都支持多文件上传。")
         return
@@ -711,7 +711,7 @@ TOOL_CONFIG = {
 
 
 def render_tool_picker() -> list[str]:
-    st.markdown("### Study Tools")
+    st.markdown("### 学习工具")
     st.caption("可选择一种或组合多种学习方式。选择只影响生成结果，不会改动你上传的材料。")
     selected: list[str] = []
     columns = st.columns(3)
